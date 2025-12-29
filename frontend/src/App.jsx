@@ -1,0 +1,93 @@
+import React from 'react'
+import { Routes, Route } from 'react-router-dom'
+import LandingPage from './page/LandingPage'
+import InteractPage from './page/InteractPage'
+import LoginPage from './page/LoginPage'
+import RegisterPage from './page/RegisterPage'
+import ForgotPasswordPage from './page/ForgotPasswordPage'
+import CourseDetailsPage from './page/CourseDetailsPage'
+import CoursesPage from './page/CoursesPage'
+import CourseCard from './component/sections/Course/CourseCard'
+import AdminLayout from './page/admin/AdminLayout'
+import DashboardPage from './page/admin/DashboardPage'
+import UsersPage from './page/admin/StudentPage'
+import AdminInstructorsPage from './page/admin/InstructorsPage'
+import AdminCoursesPage from './page/admin/AdminCoursesPage'
+import PaymentsPage from './page/admin/PaymentsPage'
+import AnalyticsPage from './page/admin/AnalyticsPage'
+import AddCoursePage from './page/admin/AddCoursePage'
+import AdminCourseView from './page/admin/AdminCourseView'
+import AdminEditCourse from './page/admin/AdminEditCourse'
+import InstructorLayout from './page/instructor/InstructorLayout'
+import InstructorDashboard from './page/instructor/InstructorDashboard'
+
+// Student imports
+import StudentLayout from './page/student/StudentLayout'
+import StudentDashboard from './page/student/StudentDashboard'
+import MyCourses from './page/student/MyCourses'
+import LiveSessions from './page/student/LiveSessions'
+import Quizzes from './page/student/Quizzes'
+import Community from './page/student/Community'
+import Leaderboard from './page/student/Leaderboard'
+import Settings from './page/student/Settings'
+
+// Public pages
+import PublicInstructorsPage from './page/InstructorsPage'
+import LearningCenter from './page/LearningCenter'
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/interact" element={<InteractPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/courses" element={<CoursesPage />} />
+      <Route path="/course/:courseId" element={<CourseDetailsPage />} />
+      <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/instructors" element={<PublicInstructorsPage />} />
+      <Route path="/learning-center" element={<LearningCenter />} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="instructors" element={<AdminInstructorsPage />} />
+        <Route path="courses" element={<AdminCoursesPage />} />
+        <Route path="courses/add" element={<AddCoursePage />} />
+        <Route path="courses/:id" element={<AdminCourseView />} />
+        <Route path="courses/edit/:id" element={<AdminEditCourse />} />
+        <Route path="community" element={<Community />} />
+        <Route path="payments" element={<PaymentsPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
+      </Route>
+
+      {/* Instructor Routes */}
+      <Route path="/instructor" element={<InstructorLayout />}>
+        <Route path="dashboard" element={<InstructorDashboard />} />
+        <Route path="my-courses" element={<InstructorDashboard />} />
+        <Route path="students" element={<InstructorDashboard />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="payments" element={<InstructorDashboard />} />
+        <Route path="messages" element={<InstructorDashboard />} />
+        <Route path="profile" element={<InstructorDashboard />} />
+      </Route>
+
+      {/* Student Routes: use layout so sidebar shows */}
+      <Route path="/student" element={<StudentLayout />}>
+        <Route index element={<StudentDashboard />} />
+        <Route path="dashboard" element={<StudentDashboard />} />
+        <Route path="my-courses" element={<MyCourses />} />
+        <Route path="live-sessions" element={<LiveSessions />} />
+        <Route path="quizzes" element={<Quizzes />} />
+        <Route path="community" element={<Community />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+    </Routes>
+  )
+}
+
+export default App
