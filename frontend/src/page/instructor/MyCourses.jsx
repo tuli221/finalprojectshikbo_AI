@@ -41,61 +41,40 @@ const MyCourses = () => {
           <p className="text-gray-500 text-sm">Contact the administrator to get courses assigned to your profile.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
-            <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition">
-              <div className="h-48 bg-gray-200">
-                {course.thumbnail ? (
-                  <img 
-                    src={`http://localhost:8000/storage/${course.thumbnail}`} 
-                    alt={course.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No Image
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="text-lg font-bold text-gray-800 line-clamp-2">{course.title}</h4>
-                  <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ml-2 ${
-                    course.status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {course.status}
-                  </span>
-                </div>
-                
-                <p className="text-sm text-gray-600 mb-3">{course.category}</p>
-                
-                <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
-                  <div className="flex items-center gap-1">
-                    <i className="fa-solid fa-users"></i>
-                    <span>{course.enrolled_count || 0} Students</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <i className="fa-solid fa-star text-yellow-500"></i>
-                    <span>{course.rating || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <i className="fa-solid fa-book"></i>
-                    <span>{course.lessons || 0} Lessons</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <i className="fa-solid fa-dollar-sign"></i>
-                    <span>${course.price}</span>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-gray-500 mt-2 p-2 bg-blue-50 rounded">
-                  <i className="fa-solid fa-info-circle mr-1"></i>
-                  This course is managed by the admin
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Students</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Lessons</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {courses.map((course) => (
+                <tr key={course.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 max-w-xs">
+                    <div className="text-sm font-medium text-gray-900 truncate">{course.title}</div>
+                    <div className="text-xs text-gray-500 truncate">{course.short_description || ''}</div>
+                  </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{course.category}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600">{course.enrolled_count || 0}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600">{course.rating || 0}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-600">{course.lessons || 0}</td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-800">${course.price}</td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <span className={`px-2 py-1 text-xs rounded ${course.status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {course.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

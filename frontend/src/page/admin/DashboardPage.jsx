@@ -1,19 +1,39 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../../config/api'
 
 const DashboardPage = () => {
   const [showModal, setShowModal] = useState(false)
   const [searchUser, setSearchUser] = useState('')
   const [searchInstructor, setSearchInstructor] = useState('')
 
-  const users = [
-    { name: 'Bob', email: 'bob@example.com', course: 'AI Fundamentals', status: 'Active' },
-    { name: 'Mim', email: 'mim@example.com', course: 'Web Dev', status: 'Pending' }
-  ]
+  const [students, setStudents] = useState([])
+  const [instructors, setInstructors] = useState([])
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
-  const instructors = [
-    { name: 'Tania Mia', initials: 'TM', courses: 5 },
-    { name: 'Arif Rahman', initials: 'AR', courses: 3 }
-  ]
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const [sRes, cRes, iRes] = await Promise.all([
+          api.get('/admin/students'),
+          api.get('/admin/courses'),
+          api.get('/admin/instructors/users')
+        ])
+        setStudents(sRes.data || [])
+        setCourses(cRes.data || [])
+        setInstructors(iRes.data || [])
+      } catch (err) {
+        setError(err.response?.data?.message || err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   return (
     <>
@@ -22,25 +42,25 @@ const DashboardPage = () => {
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
             <p className="text-bold opacity-80">Active Students</p>
-            <h3 className="text-3xl font-bold">5,432</h3>
+            <h3 className="text-3xl font-bold">{students ? students.length.toLocaleString() : '0'}</h3>
           </div>
           <div className="text-4xl opacity-80">👥</div>
         </div>
 
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
-            <p className="text-bold opacity-80">Courses</p>
-            <h3 className="text-3xl font-bold">12</h3>
+            <p className="text-bold opacity-80">Instructors</p>
+            <h3 className="text-3xl font-bold">{instructors ? instructors.length.toLocaleString() : '0'}</h3>
           </div>
-          <div className="text-4xl opacity-80">📚</div>
+          <div className="text-4xl opacity-80">🎓</div>
         </div>
 
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
-            <p className="text-bold opacity-80">This Month Earnings</p>
-            <h3 className="text-3xl font-bold">৳380,000</h3>
+            <p className="text-bold opacity-80">Courses</p>
+            <h3 className="text-3xl font-bold">{courses ? courses.length.toLocaleString() : '0'}</h3>
           </div>
-          <div className="text-4xl opacity-80">💳</div>
+          <div className="text-4xl opacity-80">📚</div>
         </div>
       </section>
 
@@ -79,28 +99,35 @@ const DashboardPage = () => {
                 </thead>
 
                 <tbody className="divide-y">
-                  {users.map((user, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="p-3">{user.name}</td>
-                      <td className="p-3">{user.email}</td>
-                      <td className="p-3">{user.course}</td>
-                      <td
-                        className={`p-3 font-semibold ${
-                          user.status === 'Active' ? 'text-green-600' : 'text-yellow-600'
-                        }`}
-                      >
-                        {user.status}
-                      </td>
-                      <td className="p-3">
-                        <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm mr-2">
-                          View
-                        </button>
-                        <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm">
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {loading && <tr><td colSpan="5" className="p-4 text-gray-600">Loading...</td></tr>}
+                  {!loading && students
+                    .filter(s => s.name.toLowerCase().includes(searchUser.toLowerCase()) || s.email.toLowerCase().includes(searchUser.toLowerCase()))
+                    .map((user) => (
+                      <tr key={`stu-${user.id}`} className="hover:bg-gray-50">
+                        <td className="p-3">{user.name}</td>
+                        <td className="p-3">{user.email}</td>
+                        <td className="p-3">{user.course?.title || '-'}</td>
+                        <td
+                          className={`p-3 font-semibold ${
+                            user.status === 'Active' ? 'text-green-600' : (user.status === 'Pending' ? 'text-yellow-600' : 'text-gray-600')
+                          }`}
+                        >
+                          {user.status}
+                        </td>
+                        <td className="p-3">
+                          <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm mr-2"
+                            onClick={() => navigate('/admin/users', { state: { openViewId: user.id } })}
+                          >
+                            View
+                          </button>
+                          <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm"
+                            onClick={() => navigate('/admin/users', { state: { openEditId: user.id } })}
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -125,32 +152,30 @@ const DashboardPage = () => {
             </div>
 
             <ul className="space-y-3">
-              {instructors.map((instructor, index) => (
-                <li
-                  key={index}
-                  className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center font-semibold text-green-700">
-                      {instructor.initials}
+              {instructors.filter(i => i.name.toLowerCase().includes(searchInstructor.toLowerCase())).map((instructor) => {
+                const initials = instructor.name ? instructor.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() : ''
+                return (
+                  <li key={instructor.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center font-semibold text-green-700">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{instructor.name}</p>
+                        <p className="text-sm text-black">Instructor • {instructor.total_courses || instructor.courses || 0} courses</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">{instructor.name}</p>
-                      <p className="text-sm text-black">
-                        Instructor • {instructor.courses} courses
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <button className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm" onClick={() => navigate('/admin/instructors', { state: { openViewId: instructor.id } })}>
+                        View Details
+                      </button>
+                      <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm" onClick={() => navigate('/admin/instructors', { state: { openEditId: instructor.id } })}>
+                        Edit
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm">
-                      Message
-                    </button>
-                    <button className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
-                      Block
-                    </button>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         </div>

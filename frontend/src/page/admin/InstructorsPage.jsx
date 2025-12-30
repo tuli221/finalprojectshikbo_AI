@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { instructorApi } from '../../config/instructorApi'
 
 const InstructorsPage = () => {
@@ -115,28 +116,46 @@ const InstructorsPage = () => {
     setShowViewModal(true)
   }
 
-  const handleEditClick = () => {
+  const handleEditClick = (instructorParam) => {
+    const instr = instructorParam || selectedInstructor
+    if (!instr) return
     setFormData({
-      name: selectedInstructor.name,
-      email: selectedInstructor.email,
-      phone: selectedInstructor.phone || '',
-      age: selectedInstructor.age || '',
-      title: selectedInstructor.title || '',
-      role: selectedInstructor.role || '',
-      company: selectedInstructor.company || '',
-      specialization: selectedInstructor.specialization || '',
-      expertise_tags: selectedInstructor.expertise_tags || '',
-      bio: selectedInstructor.bio || '',
-      status: selectedInstructor.status || 'Approved',
+      name: instr.name,
+      email: instr.email,
+      phone: instr.phone || '',
+      age: instr.age || '',
+      title: instr.title || '',
+      role: instr.role || '',
+      company: instr.company || '',
+      specialization: instr.specialization || '',
+      expertise_tags: instr.expertise_tags || '',
+      bio: instr.bio || '',
+      status: instr.status || 'Approved',
       image: null
     })
-    if (selectedInstructor.image) {
-      setImagePreview(`http://localhost:8000/storage/${selectedInstructor.image}`)
+    if (instr.image) {
+      setImagePreview(`http://localhost:8000/storage/${instr.image}`)
     }
+    setSelectedInstructor(instr)
     setIsEditMode(true)
     setShowViewModal(false)
     setShowAddModal(true)
   }
+
+  const location = useLocation()
+
+  useEffect(() => {
+    if (!location?.state) return
+    const { openViewId, openEditId } = location.state
+    if (openViewId && instructors.length) {
+      const found = instructors.find(i => i.id === openViewId)
+      if (found) handleViewDetails(found)
+    }
+    if (openEditId && instructors.length) {
+      const found = instructors.find(i => i.id === openEditId)
+      if (found) handleEditClick(found)
+    }
+  }, [location, instructors])
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this instructor?')) {

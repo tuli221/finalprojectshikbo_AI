@@ -22,6 +22,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'course_id',
+        'phone',
+        'address',
+        'enrollment_date',
     ];
 
     /**
@@ -42,5 +46,17 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+    ];
+
+    /**
+     * The course assigned to this student (nullable).
+     */
+    public function course()
+    {
+        return $this->belongsTo(\App\Models\Course::class, 'course_id');
+    }
+
+    protected $dates = [
+        'enrollment_date'
     ];
 }

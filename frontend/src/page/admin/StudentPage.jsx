@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import api from '../../config/api'
 
 const StudentPage = () => {
   const navigate = useNavigate()
@@ -15,14 +16,13 @@ const StudentPage = () => {
     enrollmentDate: '',
     address: ''
   })
-  
-  const [users] = useState([
-    { id: 1, name: 'Bob', email: 'bob@example.com', course: 'AI Fundamentals', status: 'Active' },
-    { id: 2, name: 'Mim', email: 'mim@example.com', course: 'Web Dev', status: 'Pending' },
-    { id: 3, name: 'Sarah Khan', email: 'sarah@example.com', course: 'Data Science', status: 'Active' },
-    { id: 4, name: 'John Doe', email: 'john@example.com', course: 'Machine Learning', status: 'Inactive' },
-    { id: 5, name: 'Alice Wong', email: 'alice@example.com', course: 'Web Dev', status: 'Active' }
-  ])
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [validationErrors, setValidationErrors] = useState(null)
+  const [editingUser, setEditingUser] = useState(null)
+  const location = useLocation()
 
   const filteredUsers = users.filter(
     (user) =>
@@ -30,33 +30,139 @@ const StudentPage = () => {
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setLoading(true)
+      try {
+        const res = await api.get('/admin/students')
+        setUsers(res.data)
+      } catch (err) {
+        setError(err.response?.data?.message || err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const fetchCourses = async () => {
+      try {
+        const res = await api.get('/admin/courses')
+        setCourses(res.data)
+      } catch (err) {
+        // ignore courses error for now
+      }
+    }
+
+    fetchStudents()
+    fetchCourses()
+  }, [])
+
+  useEffect(() => {
+    if (location?.state?.openEditId && users.length) {
+      const target = users.find(u => u.id === location.state.openEditId)
+      if (target) openEdit(target)
+    }
+  }, [location, users])
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
       [name]: value
     }))
+    setValidationErrors(null)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Student data:', formData)
-    // Add your student creation logic here
-    setShowAddModal(false)
+    try {
+      setValidationErrors(null)
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.password,
+        role: 'student',
+        phone: formData.phone,
+        address: formData.address,
+        enrollment_date: formData.enrollmentDate || null,
+        course_id: formData.course || null
+      }
+      const res = await api.post('/register', payload)
+      const json = res.data
+      const created = json.user || json
+      setUsers((prev) => [created, ...prev])
+      setShowAddModal(false)
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        course: '',
+        status: 'Active',
+        enrollmentDate: '',
+        address: ''
+      })
+    } catch (err) {
+      const data = err.response?.data
+      if (data?.errors) {
+        setValidationErrors(data.errors)
+      } else {
+        alert(err.response?.data?.message || err.message)
+      }
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this student?')) return
+    try {
+      await api.delete(`/admin/students/${id}`)
+      setUsers((prev) => prev.filter((u) => u.id !== id))
+    } catch (err) {
+      alert(err.response?.data?.message || err.message)
+    }
+  }
+
+  const openEdit = (user) => {
+    setEditingUser(user)
     setFormData({
-      name: '',
-      email: '',
+      name: user.name || '',
+      email: user.email || '',
       password: '',
-      phone: '',
-      course: '',
-      status: 'Active',
-      enrollmentDate: '',
-      address: ''
+      phone: user.phone || '',
+      course: user.course?.id || '',
+      status: user.status || 'Active',
+      enrollmentDate: user.enrollment_date || '',
+      address: user.address || ''
     })
+    setShowAddModal(true)
+  }
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault()
+    if (!editingUser) return
+    try {
+      const res = await api.put(`/admin/students/${editingUser.id}`, {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        course_id: formData.course || null,
+        enrollment_date: formData.enrollmentDate || null
+      })
+      const updated = res.data
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      setShowAddModal(false)
+      setEditingUser(null)
+    } catch (err) {
+      alert(err.response?.data?.message || err.message)
+    }
   }
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow">
+      {error && (
+        <div className="mb-4 text-red-600">{error}</div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-semibold">All Users</h3>
         <div className="flex items-center gap-2">
@@ -77,6 +183,7 @@ const StudentPage = () => {
       </div>
 
       <div className="overflow-x-auto">
+        {loading && <div className="py-4 text-gray-600">Loading students...</div>}
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="text-sm text-black border-b bg-gray-50">
@@ -95,7 +202,7 @@ const StudentPage = () => {
                 <td className="p-3">#{user.id}</td>
                 <td className="p-3 font-medium">{user.name}</td>
                 <td className="p-3">{user.email}</td>
-                <td className="p-3">{user.course}</td>
+                <td className="p-3">{user.course?.title || user.course || '-'}</td>
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -110,13 +217,22 @@ const StudentPage = () => {
                   </span>
                 </td>
                 <td className="p-3 space-x-2">
-                  <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">
+                  <button
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+                    onClick={() => navigate(`/admin/students/${user.id}`)}
+                  >
                     View
                   </button>
-                  <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm">
+                  <button
+                    className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm"
+                    onClick={() => openEdit(user)}
+                  >
                     Edit
                   </button>
-                  <button className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
+                  <button
+                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
+                    onClick={() => handleDelete(user.id)}
+                  >
                     Delete
                   </button>
                 </td>
@@ -144,7 +260,16 @@ const StudentPage = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={editingUser ? handleEditSubmit : handleSubmit} className="p-6 space-y-4">
+              {validationErrors && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded">
+                  <ul className="list-disc pl-5">
+                    {Object.entries(validationErrors).map(([field, msgs]) => (
+                      msgs.map((m, i) => <li key={`${field}-${i}`}>{m}</li>)
+                    ))}
+                  </ul>
+                </div>
+              )}
               {/* Name and Email */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -226,14 +351,9 @@ const StudentPage = () => {
                     required
                   >
                     <option value="">Select a course</option>
-                    <option value="Web Development">Web Development</option>
-                    <option value="Mobile Development">Mobile Development</option>
-                    <option value="Data Science">Data Science</option>
-                    <option value="AI Fundamentals">AI Fundamentals</option>
-                    <option value="Machine Learning">Machine Learning</option>
-                    <option value="Cloud Computing">Cloud Computing</option>
-                    <option value="Cybersecurity">Cybersecurity</option>
-                    <option value="DevOps">DevOps</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -290,7 +410,7 @@ const StudentPage = () => {
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setEditingUser(null) }}
                   className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
                 >
                   Cancel
@@ -299,7 +419,7 @@ const StudentPage = () => {
                   type="submit"
                   className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
                 >
-                  Add Student
+                  {editingUser ? 'Update Student' : 'Add Student'}
                 </button>
               </div>
             </form>
