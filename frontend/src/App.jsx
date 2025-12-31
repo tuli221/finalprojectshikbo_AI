@@ -4,6 +4,7 @@ import LandingPage from './page/LandingPage'
 import InteractPage from './page/InteractPage'
 import LoginPage from './page/LoginPage'
 import RegisterPage from './page/RegisterPage'
+import OtpVerifyPage from './page/OtpVerifyPage'
 import ForgotPasswordPage from './page/ForgotPasswordPage'
 import CourseDetailsPage from './page/CourseDetailsPage'
 import CoursesPage from './page/CoursesPage'
@@ -42,6 +43,7 @@ function App() {
       <Route path="/interact" element={<InteractPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-otp" element={<OtpVerifyPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/courses" element={<CoursesPage />} />
       <Route path="/course/:courseId" element={<CourseDetailsPage />} />

@@ -35,12 +35,17 @@ const RegisterPage = () => {
 
     try {
       const response = await auth.register(formData)
-      
-      // Clear the token (so they have to login)
+
+      // If registering as student, keep token and redirect to OTP verify
+      if (formData.role === 'student') {
+        alert('Registration successful! Please verify your email with the OTP sent.')
+        navigate('/verify-otp')
+        return
+      }
+
+      // Non-students: clear token and ask to login
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
-      
-      // Success! Redirect to login page
       alert('Registration successful! Please login.')
       navigate('/login')
     } catch (error) {

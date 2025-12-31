@@ -28,6 +28,14 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// OTP API routes (authenticated) - top-level
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/otp/verify', [\App\Http\Controllers\Auth\OtpController::class, 'apiVerify']);
+    Route::post('/otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'apiResend']);
+    // Student dashboard
+    Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard']);
+});
+
 // Public routes - anyone can view
 Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{id}', [CourseController::class, 'show']);
@@ -61,6 +69,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/instructors/users', function() {
         return response()->json(\App\Models\User::where('role', 'instructor')->get(['id', 'name', 'email']));
     });
+    // (admin) other admin routes continue...
     
     // Instructor profile management
     Route::post('/instructors', [InstructorController::class, 'store']);
