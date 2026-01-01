@@ -31,8 +31,8 @@ class LoginController extends Controller
 
         $token = $user->createToken('api')->plainTextToken;
 
-        // If user not OTP verified, generate and send a fresh OTP
-        if (is_null($user->otp_verified_at)) {
+        // Only require OTP for students: generate and send a fresh OTP
+        if ($user->role === 'student' && is_null($user->otp_verified_at)) {
             $code = (string) random_int(100000, 999999);
 
             Otp::create([

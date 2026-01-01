@@ -2,6 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 
+// Temporary fallback: serve storage files when `public/storage` symlink is not present.
+// This makes uploaded thumbnails accessible at /storage/{path} until `php artisan storage:link` is run.
+Route::get('/storage/{path}', function ($path) {
+    $full = storage_path('app/public/' . $path);
+    if (!file_exists($full)) {
+        abort(404);
+    }
+    return response()->file($full);
+})->where('path', '.*');
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes

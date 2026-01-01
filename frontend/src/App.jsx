@@ -21,6 +21,7 @@ import AdminCourseView from './page/admin/AdminCourseView'
 import AdminEditCourse from './page/admin/AdminEditCourse'
 import InstructorLayout from './page/instructor/InstructorLayout'
 import InstructorDashboard from './page/instructor/InstructorDashboard'
+import InstructorRequest from './page/instructor/InstructorRequest'
 
 // Student imports
 import StudentLayout from './page/student/StudentLayout'
@@ -39,6 +40,8 @@ import LearningCenter from './page/LearningCenter'
 function App() {
   return (
     <Routes>
+      {/* Make the instructor request page full-window (outside layout) so users see only the form */}
+      <Route path="/instructor/request" element={<InstructorRequest />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/interact" element={<InteractPage />} />
       <Route path="/login" element={<LoginPage />} />

@@ -91,6 +91,60 @@ class InstructorController extends Controller
     }
 
     /**
+     * Submit instructor request from a user (public).
+     * Creates an Instructor profile with status 'Pending'.
+     */
+    public function submitRequest(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
+            'role' => 'nullable|string|max:500',
+            'company' => 'nullable|string|max:255',
+            'specialization' => 'nullable|string|max:255',
+            'expertise_tags' => 'nullable|string',
+            'bio' => 'nullable|string',
+            'email' => 'nullable|email',
+            'phone' => 'nullable|string|max:20',
+            'age' => 'nullable|integer|min:18|max:100',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'linkedin' => 'nullable|url',
+            'twitter' => 'nullable|url',
+            'website' => 'nullable|url',
+        ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('instructor-images', 'public');
+        }
+
+        $instructor = Instructor::create([
+            'name' => $request->name,
+            'title' => $request->title,
+            'role' => $request->role,
+            'company' => $request->company,
+            'specialization' => $request->specialization,
+            'expertise_tags' => $request->expertise_tags,
+            'bio' => $request->bio,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'age' => $request->age,
+            'image' => $imagePath,
+            'linkedin' => $request->linkedin,
+            'twitter' => $request->twitter,
+            'website' => $request->website,
+            'is_featured' => false,
+            'join_date' => now(),
+            'status' => 'Pending',
+        ]);
+
+        return response()->json([
+            'message' => 'Instructor request submitted',
+            'instructor' => $instructor
+        ], 201);
+    }
+
+    /**
      * Update the specified instructor (Admin only).
      */
     public function update(Request $request, $id)

@@ -42,6 +42,8 @@ Route::get('/courses/{id}', [CourseController::class, 'show']);
 Route::get('/instructors', [InstructorController::class, 'index']);
 Route::get('/instructors/featured', [InstructorController::class, 'featured']);
 Route::get('/instructors/{id}', [InstructorController::class, 'show']);
+// Allow users to submit instructor requests (creates a Pending instructor profile)
+Route::post('/instructors/requests', [InstructorController::class, 'submitRequest']);
 
 // Instructor routes - view assigned courses
 Route::middleware('auth:sanctum')->group(function () {

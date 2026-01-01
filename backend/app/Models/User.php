@@ -39,6 +39,13 @@ class User extends Authenticatable
     ];
 
     /**
+     * Append computed attributes to model's array form.
+     */
+    protected $appends = [
+        'status',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
@@ -55,6 +62,30 @@ class User extends Authenticatable
     public function course()
     {
         return $this->belongsTo(\App\Models\Course::class, 'course_id');
+    }
+
+    /**
+     * Computed status attribute.
+     * - Non-students are considered active.
+     * - Students without any assigned/purchased course are 'inactive'.
+     */
+    public function getStatusAttribute()
+    {
+        if ($this->role !== 'student') {
+            return 'active';
+        }
+
+        // If a direct course_id exists, consider active
+        if (! empty($this->course_id)) {
+            return 'active';
+        }
+
+        // If there's a courses() relation (many-to-many), check existence
+        if (method_exists($this, 'courses') && $this->courses()->exists()) {
+            return 'active';
+        }
+
+        return 'inactive';
     }
 
     protected $dates = [

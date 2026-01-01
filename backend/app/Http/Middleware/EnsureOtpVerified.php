@@ -24,7 +24,8 @@ class EnsureOtpVerified
             return redirect('/login');
         }
 
-        if (is_null($user->otp_verified_at)) {
+        // Only enforce OTP verification for students
+        if ($user->role === 'student' && is_null($user->otp_verified_at)) {
             // For web: redirect to OTP verification page
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'OTP verification required.'], 403);

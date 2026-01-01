@@ -26,7 +26,8 @@ const InstructorLayout = () => {
     { path: '/instructor/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/instructor/my-courses', label: 'My Courses', icon: '📚' },
     { path: '/instructor/students', label: 'Students', icon: '👨‍🎓' },
-    { path: '/instructor/payments', label: 'Payments', icon: '💳' },
+    { path: '/instructor/request', label: 'Request', icon: '✉️' },
+    
     { path: '/instructor/messages', label: 'Messages', icon: '💬' },
     { path: '/instructor/profile', label: 'Profile', icon: '👤' }
   ]

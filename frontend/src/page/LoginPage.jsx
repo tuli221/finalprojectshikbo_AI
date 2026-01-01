@@ -32,9 +32,14 @@ const LoginPage = () => {
 
     try {
       const response = await login(formData)
-      
-      // Success! Redirect to homepage
-      navigate('/')
+      // If user is an instructor and hasn't submitted request, send to request form
+      const user = response.user || JSON.parse(localStorage.getItem('user') || 'null')
+      const requestSent = localStorage.getItem('instructor_request_sent')
+      if (user?.role === 'instructor' && !requestSent) {
+        navigate('/instructor/request')
+      } else {
+        navigate('/')
+      }
     } catch (error) {
       if (error.errors) {
         setErrors(error.errors)

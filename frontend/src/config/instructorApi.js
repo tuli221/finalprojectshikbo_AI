@@ -123,6 +123,30 @@ export const instructorApi = {
       throw error;
     }
   }
+,
+  // Request instructor profile (User submits request)
+  request: async (instructorData) => {
+    try {
+      const formData = new FormData();
+      Object.keys(instructorData).forEach(key => {
+        if (instructorData[key] !== null && instructorData[key] !== undefined && instructorData[key] !== '') {
+          formData.append(key, instructorData[key]);
+        }
+      });
+
+      // Try a dedicated endpoint for user requests; fallback to /instructors if not available
+      try {
+        const response = await api.post('/instructors/requests', formData);
+        return response.data;
+      } catch (err) {
+        const response = await api.post('/instructors', formData);
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error requesting instructor profile:', error);
+      throw error;
+    }
+  }
 };
 
 export default instructorApi;
