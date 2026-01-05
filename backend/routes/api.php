@@ -34,6 +34,74 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'apiResend']);
     // Student dashboard
     Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard']);
+    // Update authenticated user's profile (including student profile fields)
+    Route::put('/user/profile', function (Illuminate\Http\Request $request) {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['message' => 'Not authenticated'], 401);
+        }
+
+        $data = $request->only(['name', 'email', 'phone', 'bio', 'address']);
+
+        // update user primary fields
+        if (isset($data['name'])) $user->name = $data['name'];
+        if (isset($data['email'])) $user->email = $data['email'];
+        $user->save();
+
+        // update or create student_profile
+        try {
+            $profileData = [
+                'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'bio' => $data['bio'] ?? null,
+            ];
+            \App\Models\StudentProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                $profileData
+            );
+        } catch (\Exception $e) {
+            // ignore profile write errors but log
+            logger()->error('Failed to save student profile: '.$e->getMessage());
+        }
+
+        // Only eager-load studentProfile if the table exists (migrations may not have run yet)
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('student_profiles')) {
+                $user = $user->load('studentProfile');
+            }
+        } catch (\Throwable $e) {
+            // If Schema check fails for any reason, continue without the relation
+        }
+
+        return response()->json(['message' => 'Profile saved', 'user' => $user]);
+    });
+    // Allow authenticated user to change their password
+    Route::post('/user/password', function (Illuminate\Http\Request $request) {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['message' => 'Not authenticated'], 401);
+        }
+
+        $data = $request->only(['current_password', 'new_password', 'new_password_confirmation']);
+        if (!isset($data['current_password']) || !isset($data['new_password'])) {
+            return response()->json(['message' => 'Missing fields'], 422);
+        }
+
+        // verify current password
+        if (! \Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect'], 403);
+        }
+
+        if ($data['new_password'] !== ($data['new_password_confirmation'] ?? null)) {
+            return response()->json(['message' => 'Password confirmation does not match'], 422);
+        }
+
+        // update password
+        $user->password = \Illuminate\Support\Facades\Hash::make($data['new_password']);
+        $user->save();
+
+        return response()->json(['message' => 'Password updated']);
+    });
 });
 
 // Public routes - anyone can view
@@ -67,9 +135,16 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::put('/courses/{id}', [CourseController::class, 'update']);
     Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
     
-    // Get users with instructor role
+    // Get users who have approved instructor profiles (admin)
     Route::get('/instructors/users', function() {
-        return response()->json(\App\Models\User::where('role', 'instructor')->get(['id', 'name', 'email']));
+        $users = \App\Models\User::whereExists(function($q) {
+            $q->select(\DB::raw(1))
+              ->from('instructors')
+              ->whereColumn('instructors.user_id', 'users.id')
+              ->orWhereColumn('instructors.email', 'users.email');
+        })->get(['id', 'name', 'email']);
+
+        return response()->json($users);
     });
     // (admin) other admin routes continue...
     
@@ -77,6 +152,10 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::post('/instructors', [InstructorController::class, 'store']);
     Route::put('/instructors/{id}', [InstructorController::class, 'update']);
     Route::delete('/instructors/{id}', [InstructorController::class, 'destroy']);
+    // Instructor requests management (admin)
+    Route::get('/instructors/requests', [InstructorController::class, 'listRequests']);
+    Route::post('/instructors/requests/{id}/approve', [InstructorController::class, 'approveRequest']);
+    Route::delete('/instructors/requests/{id}', [InstructorController::class, 'deleteRequest']);
 
     // Student management (admin)
     Route::get('/students', function() {

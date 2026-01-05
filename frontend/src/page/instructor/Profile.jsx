@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 
 const Profile = () => {
@@ -14,31 +14,57 @@ const Profile = () => {
     bio: '',
     location: ''
   })
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const fileInputRef = useRef(null)
 
   // Fetch instructor profile on component mount
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true)
-        const token = localStorage.getItem('token')
-        const response = await axios.get('http://localhost:8000/api/instructor/profile', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // token may be stored as 'auth_token' elsewhere; fallback to 'token'
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+        const storedUser = localStorage.getItem('user')
+        const userObj = storedUser ? JSON.parse(storedUser) : null
+
+        // Use public instructors endpoint with optional user_id query (controller returns approved instructors)
+        let url = 'http://localhost:8000/api/instructors'
+        if (userObj?.id) url += `?user_id=${userObj.id}`
+
+        const response = await axios.get(url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
-        
+
+        // backend returns array for /instructors; pick the matching instructor if present
+        let data = response.data
+        if (Array.isArray(data)) {
+          if (userObj) {
+            data = data.find(i => (i.user_id && i.user_id === userObj.id) || (i.email && userObj.email && i.email.toLowerCase() === userObj.email.toLowerCase())) || data[0] || {}
+          } else {
+            data = data[0] || {}
+          }
+        }
+
         // Map API response to form fields
-        const data = response.data
         setFormData({
           name: data.name || '',
-          email: data.email || '',
+          email: data.email || (userObj?.email || ''),
           phone: data.phone || '',
           expertise: data.specialization || '',
-          yearsOfExperience: data.age ? (new Date().getFullYear() - parseInt(data.age)) : '',
+          yearsOfExperience: data.age ? String(new Date().getFullYear() - parseInt(data.age)) : '',
           education: data.title || '',
           bio: data.bio || '',
           location: data.company || ''
         })
+
+        // set profile image preview if available
+        if (data.image) {
+          // backend stores image path in storage (public disk)
+          setImagePreview(`http://localhost:8000/storage/${data.image}`)
+        } else {
+          setImagePreview(null)
+        }
       } catch (error) {
         console.error('Error fetching profile:', error)
         alert('Failed to load profile data')
@@ -61,7 +87,7 @@ const Profile = () => {
   const handleSave = async (e) => {
     e.preventDefault()
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
       const formDataToSend = new FormData()
       
       // Map form fields to API fields
@@ -72,6 +98,9 @@ const Profile = () => {
       formDataToSend.append('title', formData.education)
       formDataToSend.append('bio', formData.bio)
       formDataToSend.append('company', formData.location)
+      if (imageFile) {
+        formDataToSend.append('image', imageFile)
+      }
       
       await axios.post('http://localhost:8000/api/instructor/profile/update', formDataToSend, {
         headers: {
@@ -86,6 +115,17 @@ const Profile = () => {
       console.error('Error updating profile:', error)
       alert('Failed to update profile. Please try again.')
     }
+  }
+
+  const handleProfileFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  const triggerFileSelect = () => {
+    if (fileInputRef.current) fileInputRef.current.click()
   }
 
   const handleCancel = () => {
@@ -148,26 +188,31 @@ const Profile = () => {
         <h3 className="text-lg font-bold text-gray-800 mb-4">Profile Photo</h3>
         <div className="flex items-center gap-6">
           <img
-            src="https://api.dicebear.com/6.x/initials/svg?seed=SI"
+            src={imagePreview || 'https://api.dicebear.com/6.x/initials/svg?seed=SI'}
             alt="Profile"
-            className="w-24 h-24 rounded-full border-4 border-green-100"
+            className="w-24 h-24 rounded-full border-4 border-green-100 object-cover"
           />
           <div className="flex-1">
             <p className="text-sm text-gray-600 mb-3">Upload a professional photo. JPG or PNG, max 2MB</p>
             <div className="flex gap-3">
               <button 
+                type="button"
+                onClick={triggerFileSelect}
                 disabled={!isEditing}
                 className={`px-4 py-2 ${isEditing ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'} text-white rounded-lg text-sm transition`}
               >
                 Upload New Photo
               </button>
               <button 
+                type="button"
+                onClick={() => { if (isEditing) { setImageFile(null); setImagePreview(null); } }}
                 disabled={!isEditing}
                 className={`px-4 py-2 border ${isEditing ? 'border-gray-300 hover:bg-gray-50' : 'border-gray-200 cursor-not-allowed'} text-gray-700 rounded-lg text-sm transition`}
               >
                 Remove
               </button>
             </div>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfileFileChange} className="hidden" />
           </div>
         </div>
       </div>

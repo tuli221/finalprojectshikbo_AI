@@ -34,9 +34,9 @@ const LoginPage = () => {
       const response = await login(formData)
       // If user is an instructor and hasn't submitted request, send to request form
       const user = response.user || JSON.parse(localStorage.getItem('user') || 'null')
-      const requestSent = localStorage.getItem('instructor_request_sent')
-      if (user?.role === 'instructor' && !requestSent) {
-        navigate('/instructor/request')
+      // If logged-in user is an instructor, send to instructor dashboard
+      if (user?.role === 'instructor') {
+        navigate('/instructor/dashboard')
       } else {
         navigate('/')
       }

@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import api from '../../config/api'
 
 const Settings = () => {
   const [formData, setFormData] = useState({
-    fullName: 'Student Name',
-    email: 'student@example.com',
-    phone: '+880 123-456-7890',
-    bio: 'Passionate learner exploring new technologies',
+    fullName: '',
+    email: '',
+    phone: '',
+    bio: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -13,6 +15,21 @@ const Settings = () => {
     courseUpdates: true,
     marketingEmails: false
   })
+  const [successMsg, setSuccessMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (!user) return
+    setFormData(prev => ({
+      ...prev,
+      fullName: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      bio: user.bio || ''
+    }))
+  }, [user])
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -24,16 +41,91 @@ const Settings = () => {
 
   const handleProfileUpdate = (e) => {
     e.preventDefault()
-    console.log('Profile updated:', formData)
+    try {
+      // send to backend to persist
+      (async () => {
+        try {
+          const res = await api.put('/user/profile', {
+            name: formData.fullName || undefined,
+            email: formData.email || undefined,
+            phone: formData.phone || undefined,
+            bio: formData.bio || undefined,
+          })
+          const updatedUser = res.data.user || {}
+          // merge into localStorage user object
+          const stored = JSON.parse(localStorage.getItem('user') || '{}')
+          const merged = { ...stored, ...updatedUser }
+          localStorage.setItem('user', JSON.stringify(merged))
+          setSuccessMsg(res.data.message || 'Profile saved')
+          setTimeout(() => setSuccessMsg(''), 4000)
+        } catch (err) {
+          console.error('Failed to save profile to server', err)
+          const m = err.response?.data?.message || 'Failed to save profile'
+          setErrorMsg(m)
+          setTimeout(() => setErrorMsg(''), 5000)
+        }
+      })()
+    } catch (err) {
+      console.error('Failed to save profile locally', err)
+    }
   }
 
   const handlePasswordChange = (e) => {
     e.preventDefault()
-    console.log('Password change requested')
+    const current = formData.currentPassword
+    const next = formData.newPassword
+    const confirm = formData.confirmPassword
+
+    if (!current || !next) {
+      alert('Please enter current and new password')
+      return
+    }
+    if (next !== confirm) {
+      alert('New password and confirmation do not match')
+      return
+    }
+
+    (async () => {
+      try {
+        const res = await api.post('/user/password', {
+          current_password: current,
+          new_password: next,
+          new_password_confirmation: confirm
+        })
+        setSuccessMsg(res.data.message || 'Password updated')
+        setTimeout(() => setSuccessMsg(''), 4000)
+        // clear password fields
+        setFormData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }))
+      } catch (err) {
+        console.error('Password change failed', err)
+        const msg = err.response?.data?.message || 'Failed to change password'
+        setErrorMsg(msg)
+        setTimeout(() => setErrorMsg(''), 5000)
+      }
+    })()
   }
 
   return (
     <div className="w-full">
+
+      {/* Inline toasts for success / error */}
+      {successMsg && (
+        <div className="fixed top-6 right-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg shadow-lg z-50">
+          <div className="flex items-center gap-4">
+            <div className="font-semibold">{successMsg}</div>
+            <button onClick={() => setSuccessMsg('')} className="ml-2 text-green-700 font-bold">OK</button>
+          </div>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="fixed top-6 right-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg shadow-lg z-50">
+          <div className="flex items-center gap-4">
+            <div className="font-semibold">{errorMsg}</div>
+            <button onClick={() => setErrorMsg('')} className="ml-2 text-red-700 font-bold">Close</button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -137,53 +229,7 @@ const Settings = () => {
             </form>
           </div>
 
-          {/* Notifications Section */}
-          <div id="notifications" className="bg-white rounded-xl shadow-lg p-6">
-            <h4 className="text-lg font-bold text-gray-800 mb-4">Notification Preferences</h4>
-            <div className="space-y-4">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-gray-700">Email Notifications</span>
-                <input
-                  type="checkbox"
-                  name="emailNotifications"
-                  checked={formData.emailNotifications}
-                  onChange={handleInputChange}
-                  className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
-                />
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-gray-700">Course Updates</span>
-                <input
-                  type="checkbox"
-                  name="courseUpdates"
-                  checked={formData.courseUpdates}
-                  onChange={handleInputChange}
-                  className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
-                />
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-gray-700">Marketing Emails</span>
-                <input
-                  type="checkbox"
-                  name="marketingEmails"
-                  checked={formData.marketingEmails}
-                  onChange={handleInputChange}
-                  className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
-                />
-              </label>
-            </div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="bg-red-50 rounded-xl shadow-lg p-6 border-l-4 border-red-500">
-            <h4 className="text-lg font-bold text-red-800 mb-2">Danger Zone</h4>
-            <p className="text-sm text-gray-700 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-            <button className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition">
-              Delete Account
-            </button>
-          </div>
+         
         </div>
       </div>
     </div>

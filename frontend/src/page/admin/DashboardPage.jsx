@@ -35,6 +35,12 @@ const DashboardPage = () => {
     fetchData()
   }, [])
 
+  // Count active students as those who are enrolled in a course
+  const activeStudentsCount = (students || []).filter(s => {
+    // backend may provide a `course` relation or a `course_id` field
+    return !!(s?.course || s?.course_id)
+  }).length
+
   return (
     <>
       {/* STATS CARDS */}
@@ -42,7 +48,7 @@ const DashboardPage = () => {
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
             <p className="text-bold opacity-80">Active Students</p>
-            <h3 className="text-3xl font-bold">{students ? students.length.toLocaleString() : '0'}</h3>
+            <h3 className="text-3xl font-bold">{(activeStudentsCount || 0).toLocaleString()}</h3>
           </div>
           <div className="text-4xl opacity-80">👥</div>
         </div>

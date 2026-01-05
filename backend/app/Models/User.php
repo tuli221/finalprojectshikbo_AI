@@ -65,6 +65,24 @@ class User extends Authenticatable
     }
 
     /**
+     * Many-to-many relation for courses the user is enrolled in.
+     */
+    public function courses()
+    {
+        return $this->belongsToMany(\App\Models\Course::class, 'course_user')
+            ->withTimestamps()
+            ->withPivot(['enrolled_at', 'progress', 'completed']);
+    }
+
+    /**
+     * Student profile one-to-one relation (additional profile fields).
+     */
+    public function studentProfile()
+    {
+        return $this->hasOne(\App\Models\StudentProfile::class);
+    }
+
+    /**
      * Computed status attribute.
      * - Non-students are considered active.
      * - Students without any assigned/purchased course are 'inactive'.
@@ -81,8 +99,16 @@ class User extends Authenticatable
         }
 
         // If there's a courses() relation (many-to-many), check existence
-        if (method_exists($this, 'courses') && $this->courses()->exists()) {
-            return 'active';
+        try {
+            if (method_exists($this, 'courses') && 
+                \Illuminate\Support\Facades\Schema::hasTable('course_user') && 
+                \Illuminate\Support\Facades\Schema::hasTable('courses') &&
+                $this->courses()->exists()
+            ) {
+                return 'active';
+            }
+        } catch (\Throwable $e) {
+            // If tables don't exist yet (migrations not run), treat as inactive safely
         }
 
         return 'inactive';

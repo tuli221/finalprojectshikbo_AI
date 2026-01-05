@@ -32,7 +32,7 @@ const AddCoursePage = () => {
     if (!token) return
     
     api.get('/instructors')
-      .then(res => setInstructors(res.data))
+      .then(res => setInstructors((res.data || []).filter(i => i.status === 'Approved')))
       .catch(err => console.error(err))
     
     api.get('/admin/instructors/users')
@@ -76,7 +76,7 @@ const AddCoursePage = () => {
     data.append('level', formData.level)
     data.append('language', formData.language)
     data.append('status', formData.status)
-    data.append('instructor_id', formData.instructor_id)
+    if (formData.instructor_id) data.append('instructor_id', formData.instructor_id)
     data.append('certificate', formData.certificate ? '1' : '0')
     
     if (formData.discount_price) data.append('discount_price', formData.discount_price)
@@ -235,14 +235,13 @@ const AddCoursePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Assign Instructor <span className="text-red-500">*</span>
+              Assign Instructor
             </label>
             <select
               name="instructor_id"
               value={formData.instructor_id}
               onChange={handleInputChange}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              required
             >
               <option value="">Select instructor</option>
               {instructorUsers.map(user => (
@@ -252,7 +251,7 @@ const AddCoursePage = () => {
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Assign this course to an instructor (required)
+              Optional: assign this course to an instructor for management.
             </p>
           </div>
 

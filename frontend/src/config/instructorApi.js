@@ -124,6 +124,38 @@ export const instructorApi = {
     }
   }
 ,
+  // Get pending instructor requests (admin)
+  getRequests: async () => {
+    try {
+      const response = await api.get('/admin/instructors/requests');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching instructor requests:', error);
+      throw error;
+    }
+  },
+
+  // Approve a pending request (admin)
+  approveRequest: async (id) => {
+    try {
+      const response = await api.post(`/admin/instructors/requests/${id}/approve`);
+      return response.data;
+    } catch (error) {
+      console.error('Error approving instructor request:', error);
+      throw error;
+    }
+  },
+
+  // Delete a pending request (admin)
+  deleteRequest: async (id) => {
+    try {
+      const response = await api.delete(`/admin/instructors/requests/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting instructor request:', error);
+      throw error;
+    }
+  },
   // Request instructor profile (User submits request)
   request: async (instructorData) => {
     try {
@@ -134,14 +166,9 @@ export const instructorApi = {
         }
       });
 
-      // Try a dedicated endpoint for user requests; fallback to /instructors if not available
-      try {
-        const response = await api.post('/instructors/requests', formData);
-        return response.data;
-      } catch (err) {
-        const response = await api.post('/instructors', formData);
-        return response.data;
-      }
+      // Use dedicated endpoint for user requests
+      const response = await api.post('/instructors/requests', formData);
+      return response.data;
     } catch (error) {
       console.error('Error requesting instructor profile:', error);
       throw error;

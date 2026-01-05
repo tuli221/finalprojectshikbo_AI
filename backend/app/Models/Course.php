@@ -53,4 +53,14 @@ class Course extends Model
     {
         return $this->belongsTo(Instructor::class, 'instructor_profile_id');
     }
+
+    /**
+     * Students enrolled in this course (many-to-many).
+     */
+    public function students()
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'course_user')
+            ->withTimestamps()
+            ->withPivot(['enrolled_at', 'progress', 'completed']);
+    }
 }

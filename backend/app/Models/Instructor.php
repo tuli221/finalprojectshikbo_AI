@@ -10,6 +10,7 @@ class Instructor extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'title',
         'role',
@@ -49,5 +50,10 @@ class Instructor extends Model
     public function courses()
     {
         return $this->hasMany(Course::class, 'instructor_profile_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
 }

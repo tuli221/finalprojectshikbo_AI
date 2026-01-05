@@ -22,13 +22,12 @@ import AdminEditCourse from './page/admin/AdminEditCourse'
 import InstructorLayout from './page/instructor/InstructorLayout'
 import InstructorDashboard from './page/instructor/InstructorDashboard'
 import InstructorRequest from './page/instructor/InstructorRequest'
+import RequestPending from './page/instructor/RequestPending'
 
 // Student imports
 import StudentLayout from './page/student/StudentLayout'
 import StudentDashboard from './page/student/StudentDashboard'
 import MyCourses from './page/student/MyCourses'
-import LiveSessions from './page/student/LiveSessions'
-import Quizzes from './page/student/Quizzes'
 import Community from './page/student/Community'
 import Leaderboard from './page/student/Leaderboard'
 import Settings from './page/student/Settings'
@@ -42,6 +41,7 @@ function App() {
     <Routes>
       {/* Make the instructor request page full-window (outside layout) so users see only the form */}
       <Route path="/instructor/request" element={<InstructorRequest />} />
+      <Route path="/instructor/request-pending" element={<RequestPending />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/interact" element={<InteractPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -85,8 +85,6 @@ function App() {
         <Route index element={<StudentDashboard />} />
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="my-courses" element={<MyCourses />} />
-        <Route path="live-sessions" element={<LiveSessions />} />
-        <Route path="quizzes" element={<Quizzes />} />
         <Route path="community" element={<Community />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="settings" element={<Settings />} />

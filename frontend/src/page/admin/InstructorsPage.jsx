@@ -27,12 +27,12 @@ const InstructorsPage = () => {
   })
   const [showPendingOnly, setShowPendingOnly] = useState(false)
 
-  useEffect(() => { fetchInstructors() }, [])
+  useEffect(() => { fetchInstructors() }, [showPendingOnly])
 
   const fetchInstructors = async () => {
     try {
       setLoading(true)
-      const data = await instructorApi.getAll()
+      const data = showPendingOnly ? await instructorApi.getRequests() : await instructorApi.getAll()
       setInstructors(data || [])
     } catch (error) {
       console.error('Error fetching instructors:', error)
@@ -110,7 +110,11 @@ const InstructorsPage = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this instructor?')) return
     try {
-      await instructorApi.delete(id)
+      if (showPendingOnly) {
+        await instructorApi.deleteRequest(id)
+      } else {
+        await instructorApi.delete(id)
+      }
       fetchInstructors()
     } catch (err) { console.error(err); alert('Failed to delete') }
   }
@@ -153,7 +157,17 @@ const InstructorsPage = () => {
               <button onClick={() => handleViewDetails(instructor)} className="flex-1 px-3 py-2 bg-gray-200 rounded-lg text-sm">View</button>
               <button onClick={() => handleDelete(instructor.id)} className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm">Delete</button>
               {instructor.status === 'Pending' && (
-                <button onClick={async () => { if (!window.confirm('Approve?')) return; try { await instructorApi.update(instructor.id, { status: 'Approved' }); fetchInstructors(); } catch (err) { console.error(err); alert('Failed') } }} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">Approve</button>
+                <button onClick={async () => {
+                  if (!window.confirm('Approve?')) return;
+                  try {
+                    if (showPendingOnly) {
+                      await instructorApi.approveRequest(instructor.id)
+                    } else {
+                      await instructorApi.update(instructor.id, { status: 'Approved' })
+                    }
+                    fetchInstructors();
+                  } catch (err) { console.error(err); alert('Failed') }
+                }} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">Approve</button>
               )}
             </div>
           </div>
