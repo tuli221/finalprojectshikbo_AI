@@ -1,28 +1,43 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { courseDetailsData } from '../data/courseDetailsData'
 import Navbar from '../component/sections/Header/Navbar'
 import Footer from '../component/sections/Footer/Footer'
+import api from '../config/api'
 
 const CourseDetailsPage = () => {
   const { courseId } = useParams()
   const navigate = useNavigate()
-  const course = courseDetailsData[courseId]
+  const [course, setCourse] = useState(courseDetailsData[courseId] ?? null)
   const [expandedModules, setExpandedModules] = useState({})
+  const [loading, setLoading] = useState(false)
 
-  if (!course) {
+  useEffect(() => {
+    // If static data exists, skip API fetch
+    if (course) return
+    setLoading(true)
+    api.get(`/courses/${courseId}`)
+      .then(res => setCourse(res.data))
+      .catch(() => setCourse(null))
+      .finally(() => setLoading(false))
+  }, [courseId])
+
+  if (!course && !loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Course Not Found</h1>
-          <button 
-            onClick={() => navigate('/')}
-            className="bg-green-500 hover:bg-green-600 text-black font-semibold px-6 py-3 rounded-lg"
-          >
-            Back to Home
-          </button>
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">Course Not Found</h1>
+            <button 
+              onClick={() => navigate('/')}
+              className="bg-green-500 hover:bg-green-600 text-black font-semibold px-6 py-3 rounded-lg"
+            >
+              Back to Home
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -33,10 +48,33 @@ const CourseDetailsPage = () => {
     }))
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">Loading...</div>
+      </div>
+    )
+  }
+
+  // Price display: use discount_price as main price when provided
+  const price = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
+    ? course.discount_price
+    : (course.price ?? '')
+  const originalPrice = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
+    ? (course.price ?? '')
+    : ''
+
+  // Normalize image source: prefer `imageSrc`, fall back to `thumbnail` from API
+  let imageSrc = course?.imageSrc || ''
+  if (!imageSrc && course?.thumbnail) {
+    const base = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8000'
+    imageSrc = course.thumbnail.startsWith('http') ? course.thumbnail : `${base}/storage/${course.thumbnail}`
+  }
+
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
-      {/* Navbar */}
+    <>
       <Navbar />
+      <div className="bg-gray-900 text-white min-h-screen">
 
       {/* Hero Section */}
       <section className="bg-gray-950 py-16 px-6">
@@ -88,17 +126,17 @@ const CourseDetailsPage = () => {
             {/* RIGHT SIDEBAR CARD */}
             <div className="bg-gray-800 rounded-3xl p-3 shadow-xl w-full md:max-w-[700px] md:-mt-16">
               <img 
-                src={course.imageSrc}
+                src={imageSrc || '/assets/React.jpg'}
                 alt={course.title}
-                className="rounded-xl mb-6 w-full h-40 object-cover"
+                className="rounded-xl mb-6 w-full h-48 sm:h-56 object-cover shadow-lg"
               />
 
               <div className="text-center">
-                <h2 className="text-3xl font-extrabold text-green-400 mb-1">৳{course.price}</h2>
-                <p className="text-gray-400 line-through">৳{course.originalPrice}</p>
-                <p className="text-gray-300 text-sm mb-6">50% off! One-time payment</p>
+                <h2 className="text-3xl font-extrabold text-green-400 mb-1">৳{price}</h2>
+                <p className="text-gray-400 line-through">{originalPrice ? `৳${originalPrice}` : ''}</p>
+                <p className="text-gray-300 text-sm mb-6">One-time payment</p>
 
-                <button className="w-full bg-green-500 hover:bg-green-600 text-gray-900 font-semibold py-3 rounded-xl text-lg transition">
+                <button className="w-full bg-green-500 hover:bg-green-600 text-gray-900 font-semibold py-3 rounded-xl text-lg transition shadow-inner">
                   Enroll Now
                 </button>
               </div>
@@ -109,11 +147,11 @@ const CourseDetailsPage = () => {
 
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* LEFT SIDE */}
           <div className="lg:col-span-2 space-y-8">
             {/* About */}
-            <div className="bg-black/50 backdrop-blur-xl rounded-3xl p-8 shadow-xl">
+            <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-black/40">
               <h2 className="text-3xl font-bold mb-4">About This Course</h2>
               <p className="text-gray-300 leading-relaxed">
                 {course.about}
@@ -121,51 +159,49 @@ const CourseDetailsPage = () => {
             </div>
 
             {/* What you'll learn */}
-            <div className="bg-black/50 backdrop-blur-xl rounded-3xl p-8 shadow-xl">
+            <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-black/40">
               <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                <span className="text-green-500 text-3xl">📗</span> What You'll Learn
+                <span className="text-green-500 text-3xl">📗</span>
+                <span>What You'll Learn</span>
               </h2>
 
               <ul className="list-disc text-white ml-6 space-y-3 leading-relaxed">
-                {course.whatYouLearn.map((item, index) => (
+                {(course.whatYouLearn || []).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
             </div>
 
             {/* Modules */}
-            <div className="bg-black/50 backdrop-blur-xl rounded-3xl p-8 shadow-xl">
-              <h2 className="text-3xl font-bold mb-6">Course Modules</h2>
+            <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-6 shadow-xl border border-black/40">
+              <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                <span className="text-green-500 text-3xl">📗</span>
+                <span>Course Modules</span>
+              </h2>
 
               <div className="space-y-4">
-                {course.modules.map((module) => (
+                {(course.modules || []).map((module) => (
                   <div 
                     key={module.number}
-                    className="bg-gray-800 rounded-xl p-4 hover:bg-gray-700 transition"
+                    className="bg-gray-900/60 ring-1 ring-white/5 rounded-xl p-4 hover:bg-gray-800 transition flex items-center justify-between"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500 text-black font-bold">
-                          {module.number}
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold">{module.title}</p>
-                        </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-500 text-black font-bold">
+                        {module.number}
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => toggleModule(module.number)}
-                        className="p-2 text-gray-400"
-                        aria-expanded={expandedModules[module.number] || false}
-                      >
-                        <i className={`fa-solid ${expandedModules[module.number] ? 'fa-chevron-up' : 'fa-chevron-right'}`}></i>
-                      </button>
+                      <div>
+                        <p className="text-lg font-semibold">{module.title}</p>
+                        <p className="text-sm text-gray-400">{module.shortDescription || ''}</p>
+                      </div>
                     </div>
-                    {expandedModules[module.number] && (
-                      <div className="mt-3 text-sm text-gray-400 pl-12">
-                        {module.description}
-                      </div>
-                    )}
+                    <button 
+                      type="button"
+                      onClick={() => toggleModule(module.number)}
+                      className="p-2 text-gray-400"
+                      aria-expanded={expandedModules[module.number] || false}
+                    >
+                      <i className={`fa-solid ${expandedModules[module.number] ? 'fa-chevron-up' : 'fa-chevron-right'}`}></i>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -180,12 +216,12 @@ const CourseDetailsPage = () => {
 
               <div className="flex justify-center mb-4">
                 <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-black font-bold text-xl">
-                  {course.instructor.initials}
+                  {course.instructor?.initials || ''}
                 </div>
               </div>
 
-              <h4 className="text-xl font-semibold">{course.instructor.name}</h4>
-              <p className="text-gray-400 text-sm mt-1">{course.instructor.title}</p>
+              <h4 className="text-xl font-semibold">{course.instructor?.name || ''}</h4>
+              <p className="text-gray-400 text-sm mt-1">{course.instructor?.title || ''}</p>
             </div>
 
             {/* Course details */}
@@ -220,6 +256,7 @@ const CourseDetailsPage = () => {
       {/* Footer */}
       <Footer />
     </div>
+    </>
   )
 }
 

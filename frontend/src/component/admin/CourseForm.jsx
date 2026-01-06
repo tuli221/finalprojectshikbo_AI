@@ -12,6 +12,7 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
     instructor_id: '',
     instructor_profile_id: '',
     level: 'Beginner',
+    type: '',
     language: 'English',
     status: 'Draft',
     requirements: '',
@@ -134,6 +135,16 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
             <option value="Both">Both (English & Bengali)</option>
           </select>
         </div>
+      </div>
+
+      {/* Type (Online / Offline) */}
+      <div className="mt-3">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+        <select name="type" value={formData.type} onChange={handleInputChange} className="w-full border rounded-lg px-3 py-2">
+          <option value="">Select type</option>
+          <option value="Online">Online</option>
+          <option value="Offline">Offline</option>
+        </select>
       </div>
 
       {/* Status */}

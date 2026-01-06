@@ -9,14 +9,20 @@ const CourseCard = ({ course }) => {
   // Support course objects from static data and from API responses
   const id = course.id
   const level = course.level || course.level_name || 'Beginner'
-  const category = course.category || course.type || ''
+  const category = course.category || ''
+  const courseType = course.type || course.mode || ''
   const title = course.title || ''
   const description = course.description || ''
   const duration = typeof course.duration === 'number' ? `${course.duration} hours` : (course.duration || '—')
   const students = course.enrolled_count ? `${course.enrolled_count} students` : (course.students || '0 students')
   const rating = course.rating ?? 4.8
-  const price = course.price ?? course.discount_price ?? course.price ?? '0'
-  const originalPrice = course.originalPrice ?? course.discount_price ?? course.original_price ?? ''
+  // Show discount price as the main price when available, otherwise show regular price.
+  const price = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
+    ? course.discount_price
+    : (course.price ?? '0')
+  const originalPrice = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
+    ? (course.price ?? '')
+    : ''
   const lessons = course.lessons ?? 0
   // Normalize thumbnail to an absolute URL if provided by backend
   let imageSrc = course.imageSrc || ''
@@ -57,7 +63,14 @@ const CourseCard = ({ course }) => {
 
       {/* Content */}
       <div className="p-4 sm:p-6 flex-1 flex flex-col">
-        <p className="text-green-400 text-sm font-semibold mb-2">{category}</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-green-400 text-sm font-semibold">{category}</p>
+          {courseType && (
+            <span className={`text-xs sm:text-sm font-semibold px-2 py-1 rounded-full ${courseType.toLowerCase() === 'online' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'}`}>
+              {courseType}
+            </span>
+          )}
+        </div>
         <h3 className="text-white font-bold text-lg sm:text-xl mb-3 line-clamp-2 hover:text-green-400 transition-colors duration-300">
           {title}
         </h3>

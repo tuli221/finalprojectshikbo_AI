@@ -45,7 +45,10 @@ const AdminCoursesPage = () => {
             className="px-3 py-2 border rounded-lg text-sm"
           />
           <button onClick={() => navigate('/admin/courses/add')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow">
-            + Add New Course
+            + Add
+          </button>
+          <button onClick={() => navigate('/admin/modules/add')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow">
+            + Add Module
           </button>
         </div>
       </div>

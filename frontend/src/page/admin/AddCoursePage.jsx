@@ -17,11 +17,10 @@ const AddCoursePage = () => {
     instructor_id: '',
     instructor_profile_id: '',
     level: 'Beginner',
+      type: 'Online',
     language: 'English',
     status: 'Published',
-    requirements: '',
-    what_you_learn: '',
-    course_modules: '',
+    video_url: '',
     video_url: '',
     certificate: true,
   })
@@ -81,15 +80,15 @@ const AddCoursePage = () => {
     
     if (formData.discount_price) data.append('discount_price', formData.discount_price)
     if (formData.instructor_profile_id) data.append('instructor_profile_id', formData.instructor_profile_id)
-    if (formData.requirements) data.append('requirements', formData.requirements)
-    if (formData.what_you_learn) data.append('what_you_learn', formData.what_you_learn)
-    if (formData.course_modules) data.append('course_modules', formData.course_modules)
+    // `requirements`, `what_you_learn`, and `course_modules` removed (dropped from DB)
     if (formData.video_url) data.append('video_url', formData.video_url)
     
     if (thumbnail) {
       console.log('Adding thumbnail to FormData:', thumbnail)
       data.append('thumbnail', thumbnail)
     }
+
+    if (formData.type) data.append('type', formData.type)
 
     console.log('Submitting form with instructor_id:', formData.instructor_id)
 
@@ -296,6 +295,22 @@ const AddCoursePage = () => {
               <option value="Advanced">Advanced</option>
             </select>
           </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              >
+                <option value="Online">Online</option>
+                <option value="Offline">Offline</option>
+              </select>
+            </div>
         </div>
 
         {/* Language and Status */}
@@ -394,50 +409,7 @@ const AddCoursePage = () => {
           ></textarea>
         </div>
 
-        {/* Requirements */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Requirements (Optional)
-          </label>
-          <textarea
-            name="requirements"
-            value={formData.requirements}
-            onChange={handleInputChange}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="What students need to know or have before taking this course..."
-            rows="3"
-          ></textarea>
-        </div>
-
-        {/* What You'll Learn */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            What You'll Learn (Optional)
-          </label>
-          <textarea
-            name="what_you_learn"
-            value={formData.what_you_learn}
-            onChange={handleInputChange}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Key takeaways and skills students will gain..."
-            rows="3"
-          ></textarea>
-        </div>
-
-        {/* Course Modules */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Modules (Optional)
-          </label>
-          <textarea
-            name="course_modules"
-            value={formData.course_modules}
-            onChange={handleInputChange}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Module breakdown or curriculum outline..."
-            rows="3"
-          ></textarea>
-        </div>
+        {/* Note: Requirements, What You'll Learn and Course Modules fields were removed because they are dropped from the database. */}
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4">

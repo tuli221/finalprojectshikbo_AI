@@ -18,6 +18,7 @@ return new class extends Migration
         $table->string('password');
         $table->enum('role', ['admin', 'student', 'instructor'])->default('student');
         $table->rememberToken();
+        $table->timestamp('otp_verified_at')->nullable()->after('remember_token');
         $table->timestamps();
         });
     }

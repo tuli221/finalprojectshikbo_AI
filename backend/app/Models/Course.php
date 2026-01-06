@@ -15,6 +15,7 @@ class Course extends Model
         'description',
         'duration',
         'level',
+        'type',
         'price',
         'discount_price',
         'lessons',

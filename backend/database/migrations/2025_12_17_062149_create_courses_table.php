@@ -23,10 +23,25 @@ return new class extends Migration
             $table->integer('price');
             $table->integer('discount_price')->nullable();
 
-            $table->integer('lessons');
+            $table->integer('lessons')->default(0);
             $table->string('thumbnail')->nullable();
 
+            $table->string('type')->nullable();
+
             $table->foreignId('instructor_id')->constrained('users');
+            // Admin management additional fields moved here:
+            if (!Schema::hasColumn('courses', 'instructor_profile_id')) {
+                $table->foreignId('instructor_profile_id')->nullable()->constrained('instructors')->onDelete('set null');
+            }
+            if (!Schema::hasColumn('courses', 'language')) {
+                $table->string('language')->default('English');
+            }
+            if (!Schema::hasColumn('courses', 'video_url')) {
+                $table->string('video_url')->nullable();
+            }
+            if (!Schema::hasColumn('courses', 'certificate')) {
+                $table->boolean('certificate')->default(true);
+            }
 
             $table->string('status')->default('Draft'); // Draft | Published
 
