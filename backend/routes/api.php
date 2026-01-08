@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\InstructorController;
+use App\Http\Controllers\CourseInformationController;
 use App\Models\User;
 use Illuminate\Http\Request as HttpRequest;
 
@@ -112,6 +113,14 @@ Route::get('/instructors/featured', [InstructorController::class, 'featured']);
 Route::get('/instructors/{id}', [InstructorController::class, 'show']);
 // Allow users to submit instructor requests (creates a Pending instructor profile)
 Route::post('/instructors/requests', [InstructorController::class, 'submitRequest']);
+
+// Course Information routes
+Route::get('/course-information', [CourseInformationController::class, 'index']);
+Route::get('/course-information/{id}', [CourseInformationController::class, 'show']);
+Route::get('/course-information/course/{courseId}', [CourseInformationController::class, 'getByCourse']);
+Route::post('/course-information', [CourseInformationController::class, 'store']);
+Route::put('/course-information/{id}', [CourseInformationController::class, 'update']);
+Route::delete('/course-information/{id}', [CourseInformationController::class, 'destroy']);
 
 // Instructor routes - view assigned courses
 Route::middleware('auth:sanctum')->group(function () {

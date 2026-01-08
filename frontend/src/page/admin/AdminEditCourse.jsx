@@ -95,6 +95,8 @@ const AdminEditCourse = () => {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         submitLabel={saving ? 'Saving...' : 'Save Changes'}
+        showInfoFields={false}
+        fixedType="Offline"
       />
     </div>
   )

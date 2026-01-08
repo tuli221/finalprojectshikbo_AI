@@ -17,7 +17,7 @@ const AddCoursePage = () => {
     instructor_id: '',
     instructor_profile_id: '',
     level: 'Beginner',
-      type: 'Online',
+      type: 'Offline',
     language: 'English',
     status: 'Published',
     video_url: '',
@@ -300,16 +300,8 @@ const AddCoursePage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Type <span className="text-red-500">*</span>
               </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              >
-                <option value="Online">Online</option>
-                <option value="Offline">Offline</option>
-              </select>
+              <div className="w-full border rounded-lg px-3 py-2 text-gray-700">Offline</div>
+              <input type="hidden" name="type" value="Offline" />
             </div>
         </div>
 

@@ -50,6 +50,7 @@ const AdminCoursesPage = () => {
           <button onClick={() => navigate('/admin/modules/add')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow">
             + Add Module
           </button>
+          <span className="sr-only">module helpers</span>
         </div>
       </div>
 
@@ -167,14 +168,17 @@ function AdminCourseRow({ course, onDeleted }) {
       </td>
       <td className="p-3">
         <div className="flex items-center gap-2">
-          <button title="View" onClick={handleView} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">
-            <i className="fa-solid fa-eye" />
+          <button title="View" onClick={handleView} className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs flex items-center justify-center">
+            <i className="fa-solid fa-eye text-xs" aria-hidden="true" />
           </button>
-          <button title="Edit" onClick={handleEdit} className="p-2 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm">
-            <i className="fa-solid fa-pen" />
+          <button title="Edit" onClick={handleEdit} className="p-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-xs flex items-center justify-center">
+            <i className="fa-solid fa-pen-to-square text-xs" aria-hidden="true" />
           </button>
-          <button title="Delete" onClick={handleDelete} disabled={deleting} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
-            <i className="fa-solid fa-trash" />
+          <button title="Edit Modules" onClick={() => navigate(`/admin/modules/add?course_id=${course.id}`)} className="p-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs flex items-center justify-center">
+            <i className="fa-solid fa-layer-group text-xs" aria-hidden="true" />
+          </button>
+          <button title="Delete" onClick={handleDelete} disabled={deleting} className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center">
+            <i className="fa-solid fa-trash-can text-xs" aria-hidden="true" />
           </button>
         </div>
       </td>

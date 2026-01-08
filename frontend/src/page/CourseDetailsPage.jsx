@@ -13,13 +13,78 @@ const CourseDetailsPage = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // If static data exists, skip API fetch
-    if (course) return
-    setLoading(true)
-    api.get(`/courses/${courseId}`)
-      .then(res => setCourse(res.data))
-      .catch(() => setCourse(null))
-      .finally(() => setLoading(false))
+    // If static data exists, still fetch course from API only when missing; always fetch course info separately
+    let mounted = true
+    const fetchCourse = async () => {
+      try {
+        setLoading(true)
+        if (!course) {
+          const res = await api.get(`/courses/${courseId}`)
+          if (!mounted) return
+          setCourse(res.data)
+        }
+      } catch (e) {
+        if (!mounted) return
+        setCourse(null)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    fetchCourse()
+    return () => { mounted = false }
+  }, [courseId])
+
+  // Fetch course-information (about, what_you_learn, modules) and merge into `course` state
+  useEffect(() => {
+    let mounted = true
+    const fetchCourseInfo = async () => {
+      try {
+        const res = await api.get(`/course-information/course/${courseId}`)
+        if (!mounted) return
+        const info = res.data?.data || res.data || res
+
+        // Prepare merged fields
+        const merged = {}
+
+        if (info?.about_course) merged.about = info.about_course
+
+        // what_you_learn may be stored as a string; convert to array for the UI
+        if (info?.what_you_learn) {
+          if (Array.isArray(info.what_you_learn)) {
+            merged.whatYouLearn = info.what_you_learn
+          } else if (typeof info.what_you_learn === 'string') {
+            // split by newlines or bullet separators
+            const parts = info.what_you_learn.split(/\r?\n|\n|•|\u2022/).map(s => s.trim()).filter(Boolean)
+            merged.whatYouLearn = parts
+          }
+        }
+
+        // modules may be JSON string or array. Normalize to expected UI shape
+        if (info?.modules) {
+          let modules = info.modules
+          if (typeof modules === 'string') {
+            try { modules = JSON.parse(modules) } catch (e) { modules = [] }
+          }
+          if (Array.isArray(modules)) {
+            // Map backend module keys to UI keys: module_title -> title, module_description -> shortDescription
+            merged.modules = modules.map((m, idx) => ({
+              number: (m.number ?? (idx + 1)),
+              title: ((m.module_title ?? m.title ?? `Module ${idx + 1}`) + '').trim(),
+              shortDescription: ((m.module_description ?? m.shortDescription ?? '') + '').trim()
+            }))
+          }
+        }
+
+        // Merge into existing course state (preserve other fields)
+        setCourse(prev => prev ? ({ ...prev, ...merged }) : ({ ...(merged || {}), id: courseId }))
+      } catch (e) {
+        // ignore if no course information exists
+      }
+    }
+
+    fetchCourseInfo()
+    return () => { mounted = false }
   }, [courseId])
 
   if (!course && !loading) {

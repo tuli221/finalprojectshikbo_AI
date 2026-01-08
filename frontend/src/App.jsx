@@ -19,6 +19,8 @@ import AnalyticsPage from './page/admin/AnalyticsPage'
 import AddCoursePage from './page/admin/AddCoursePage'
 import AdminCourseView from './page/admin/AdminCourseView'
 import AdminEditCourse from './page/admin/AdminEditCourse'
+import AddCourseInformation from './page/admin/AddCourseInformation'
+import EditCourseInformation from './page/admin/EditCourseInformation'
 import InstructorLayout from './page/instructor/InstructorLayout'
 import InstructorDashboard from './page/instructor/InstructorDashboard'
 import InstructorRequest from './page/instructor/InstructorRequest'
@@ -64,6 +66,8 @@ function App() {
         <Route path="courses/add" element={<AddCoursePage />} />
         <Route path="courses/:id" element={<AdminCourseView />} />
         <Route path="courses/edit/:id" element={<AdminEditCourse />} />
+        <Route path="modules/add" element={<AddCourseInformation />} />
+        <Route path="modules/edit/:id" element={<EditCourseInformation />} />
         <Route path="community" element={<Community />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />

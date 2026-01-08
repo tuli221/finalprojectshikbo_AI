@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = [], onSubmit, onCancel, submitLabel = 'Save' }) => {
+const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = [], onSubmit, onCancel, submitLabel = 'Save', showInfoFields = true, fixedType = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -140,11 +140,18 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
       {/* Type (Online / Offline) */}
       <div className="mt-3">
         <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-        <select name="type" value={formData.type} onChange={handleInputChange} className="w-full border rounded-lg px-3 py-2">
-          <option value="">Select type</option>
-          <option value="Online">Online</option>
-          <option value="Offline">Offline</option>
-        </select>
+        {fixedType ? (
+          <>
+            <div className="w-full border rounded-lg px-3 py-2 text-gray-700">{fixedType}</div>
+            <input type="hidden" name="type" value={fixedType} />
+          </>
+        ) : (
+          <select name="type" value={formData.type} onChange={handleInputChange} className="w-full border rounded-lg px-3 py-2">
+            <option value="">Select type</option>
+            <option value="Online">Online</option>
+            <option value="Offline">Offline</option>
+          </select>
+        )}
       </div>
 
       {/* Status */}
@@ -177,29 +184,33 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
         <label className="text-sm text-gray-700">Course includes certificate upon completion</label>
       </div>
 
-      {/* Description */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Course Description <span className="text-red-500">*</span></label>
-        <textarea name="description" value={formData.description} onChange={handleInputChange} required rows="4" className="w-full border rounded-lg px-3 py-2" />
-      </div>
+      {showInfoFields && (
+        <>
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Course Description <span className="text-red-500">*</span></label>
+            <textarea name="description" value={formData.description} onChange={handleInputChange} required rows="4" className="w-full border rounded-lg px-3 py-2" />
+          </div>
 
-      {/* Requirements */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Requirements (Optional)</label>
-        <textarea name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
-      </div>
+          {/* Requirements */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Requirements (Optional)</label>
+            <textarea name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
+          </div>
 
-      {/* What You'll Learn */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">What You'll Learn (Optional)</label>
-        <textarea name="what_you_learn" value={formData.what_you_learn} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
-      </div>
+          {/* What You'll Learn */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">What You'll Learn (Optional)</label>
+            <textarea name="what_you_learn" value={formData.what_you_learn} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
+          </div>
 
-      {/* Course Modules */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Course Modules (Optional)</label>
-        <textarea name="course_modules" value={formData.course_modules} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
-      </div>
+          {/* Course Modules */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Course Modules (Optional)</label>
+            <textarea name="course_modules" value={formData.course_modules} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
+          </div>
+        </>
+      )}
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-3 pt-4">

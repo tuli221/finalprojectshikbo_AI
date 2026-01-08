@@ -6,15 +6,52 @@ const AdminCourseView = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [course, setCourse] = useState(null)
+  const [courseInfo, setCourseInfo] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    api.get(`/courses/${id}`)
-      .then(res => mounted && setCourse(res.data))
-      .catch(err => console.error('Failed to fetch course', err))
+    
+    console.log('Fetching course data for ID:', id)
+    
+    // Fetch both course and course information
+    Promise.all([
+      api.get(`/courses/${id}`),
+      api.get(`/course-information/course/${id}`)
+    ])
+      .then(([courseRes, infoRes]) => {
+        console.log('Course data:', courseRes.data)
+        console.log('Course info data:', infoRes.data)
+        if (mounted) {
+          setCourse(courseRes.data)
+
+          // Normalize modules: API may return modules as a JSON string.
+          let info = infoRes?.data || null
+          if (info && info.modules) {
+            if (typeof info.modules === 'string') {
+              try {
+                info.modules = JSON.parse(info.modules)
+              } catch (e) {
+                console.warn('Failed to parse courseInfo.modules JSON, using empty array', e)
+                info.modules = []
+              }
+            }
+          }
+
+          setCourseInfo(info)
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch course data', err)
+        console.error('Error details:', err.response?.data)
+        // Still set course even if info fails
+        api.get(`/courses/${id}`)
+          .then(res => mounted && setCourse(res.data))
+          .catch(e => console.error(e))
+      })
       .finally(() => mounted && setLoading(false))
+    
     return () => { mounted = false }
   }, [id])
 
@@ -45,6 +82,77 @@ const AdminCourseView = () => {
           <p><strong>Status:</strong> {course.status}</p>
         </div>
       </div>
+
+      {/* Course Information Section */}
+      {courseInfo && (
+        <div className="mt-8 space-y-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Course Information</h2>
+            <button
+              onClick={() => navigate(`/admin/modules/edit/${courseInfo.id}`)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Edit Course Information
+            </button>
+          </div>
+
+          {/* About This Course */}
+          {courseInfo.about_course && (
+            <div className="bg-gray-800 text-white p-6 rounded-xl">
+              <h3 className="text-2xl font-bold mb-4">About This Course</h3>
+              <p className="text-gray-300 whitespace-pre-line">{courseInfo.about_course}</p>
+            </div>
+          )}
+
+          {/* What You'll Learn */}
+          {courseInfo.what_you_learn && (
+            <div className="bg-gray-800 text-white p-6 rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-green-500 text-2xl">📚</span>
+                <h3 className="text-2xl font-bold">What You'll Learn</h3>
+              </div>
+              <div className="text-gray-300 whitespace-pre-line">{courseInfo.what_you_learn}</div>
+            </div>
+          )}
+
+          {/* Course Modules */}
+          {courseInfo.modules && courseInfo.modules.length > 0 && (
+            <div className="bg-gray-800 text-white p-6 rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-green-500 text-2xl">📖</span>
+                <h3 className="text-2xl font-bold">Course Modules</h3>
+              </div>
+              <div className="space-y-4">
+                {Array.isArray(courseInfo.modules) && courseInfo.modules.map((module, moduleIndex) => (
+                  <div key={moduleIndex} className="bg-gray-700 p-4 rounded-lg flex items-start gap-4">
+                    <div className="flex-none w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">{moduleIndex + 1}</div>
+                    <div className="flex-1">
+                      <h4 className="text-xl font-semibold text-green-400 mb-1">
+                        {module.module_title || `Module ${moduleIndex + 1}`}
+                      </h4>
+                      {module.module_description && (
+                        <p className="text-gray-300">{module.module_description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!courseInfo && !loading && (
+        <div className="mt-8 text-center">
+          <p className="text-gray-500 mb-4">No additional course information available</p>
+          <button
+            onClick={() => navigate('/admin/modules/add')}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            Add Course Information
+          </button>
+        </div>
+      )}
     </div>
   )
 }
