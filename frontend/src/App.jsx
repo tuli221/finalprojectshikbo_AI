@@ -14,9 +14,12 @@ import DashboardPage from './page/admin/DashboardPage'
 import UsersPage from './page/admin/StudentPage'
 import AdminInstructorsPage from './page/admin/InstructorsPage'
 import AdminCoursesPage from './page/admin/AdminCoursesPage'
+import AdminProgramsPage from './page/admin/AdminProgramsPage'
 import PaymentsPage from './page/admin/PaymentsPage'
 import AnalyticsPage from './page/admin/AnalyticsPage'
 import AddCoursePage from './page/admin/AddCoursePage'
+import AddProgram from './page/admin/AddProgram'
+import BookingPage from './page/BookingPage'
 import AdminCourseView from './page/admin/AdminCourseView'
 import AdminEditCourse from './page/admin/AdminEditCourse'
 import AddCourseInformation from './page/admin/AddCourseInformation'
@@ -55,6 +58,7 @@ function App() {
       <Route path="/leaderboard" element={<Leaderboard />} />
       <Route path="/instructors" element={<PublicInstructorsPage />} />
       <Route path="/learning-center" element={<LearningCenter />} />
+      <Route path="booking/:id" element={<BookingPage />} />
       
       {/* Admin Routes */}
       <Route path="/admin" element={<AdminLayout />}>
@@ -63,11 +67,15 @@ function App() {
         <Route path="users" element={<UsersPage />} />
         <Route path="instructors" element={<AdminInstructorsPage />} />
         <Route path="courses" element={<AdminCoursesPage />} />
+        <Route path="programs" element={<AdminProgramsPage />} />
+        <Route path="programs/edit/:id" element={<AddProgram />} />
         <Route path="courses/add" element={<AddCoursePage />} />
+        <Route path="programs/add" element={<AddProgram />} />
         <Route path="courses/:id" element={<AdminCourseView />} />
         <Route path="courses/edit/:id" element={<AdminEditCourse />} />
         <Route path="modules/add" element={<AddCourseInformation />} />
         <Route path="modules/edit/:id" element={<EditCourseInformation />} />
+        
         <Route path="community" element={<Community />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />

@@ -24,6 +24,23 @@ const StudentPage = () => {
   const [editingUser, setEditingUser] = useState(null)
   const location = useLocation()
 
+  useEffect(() => {
+    if (location?.state?.openAdd) {
+      setEditingUser(null)
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        course: '',
+        status: 'Active',
+        enrollmentDate: '',
+        address: ''
+      })
+      setShowAddModal(true)
+    }
+  }, [location])
+
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

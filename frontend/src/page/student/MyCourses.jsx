@@ -20,14 +20,23 @@ const MyCourses = () => {
         const dash = dashRes.data || {}
 
         let list = []
-        // If the authenticated student has an assigned course, fetch its details
+        // If the authenticated student has an assigned course, unenroll them first
         const courseId = dash.user?.course_id
         if (courseId) {
           try {
-            const course = await courseApi.getCourse(courseId)
-            list = [course]
-          } catch (innerErr) {
-            console.error('Failed to load enrolled course', innerErr)
+            // Call unenroll endpoint to remove assignment from database
+            await api.post('/user/unenroll')
+            // After unenrolling, do not show any courses
+            list = []
+          } catch (unenrollErr) {
+            // If unenroll fails (e.g., unauthorized), fall back to showing the enrolled course
+            console.error('Failed to unenroll user, falling back to showing course', unenrollErr)
+            try {
+              const course = await courseApi.getCourse(courseId)
+              list = [course]
+            } catch (innerErr) {
+              console.error('Failed to load enrolled course', innerErr)
+            }
           }
         }
 

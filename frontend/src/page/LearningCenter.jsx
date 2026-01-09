@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../config/api'
 import Navbar from '../component/sections/Header/Navbar'
 import Footer from '../component/sections/Footer/Footer'
 import ChatBot from '../component/ui/ChatBot'
@@ -6,60 +8,68 @@ import ChatBot from '../component/ui/ChatBot'
 const LearningCenter = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [programs, setPrograms] = useState([])
+
+  const transformProgram = (p) => {
+    // normalize image URL: backend may return absolute URL or a relative path like /storage/...
+    let imageUrl = p.image || '/assets/aipython.png'
+    if (imageUrl && typeof imageUrl === 'string' && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+      // prefix with backend host if needed (api.baseURL is like http://localhost:8000/api)
+      try {
+        const base = api.defaults.baseURL.replace(/\/?api\/?$/, '')
+        imageUrl = `${base}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`
+      } catch (e) {
+        // fallback: leave as-is
+      }
+    }
+
+    return {
+      id: p.id,
+      title: p.title,
+      image: imageUrl,
+      badge: p.badge || (p.price_current ? 'Premium' : 'Free'),
+      badgeColor: (p.badge && p.badge.toLowerCase().includes('free')) ? 'bg-green-500' : 'bg-yellow-500',
+      features: Array.isArray(p.features) ? p.features : (p.features ? JSON.parse(p.features) : []),
+      price: p.price_current ? { current: p.price_current, original: p.price_original } : null
+    }
+  }
+
+  // Load programs from backend, fallback to localStorage
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await api.get('/programs')
+        if (res && res.data && !cancelled) {
+          const list = (res.data || []).map(transformProgram)
+          if (list.length) return setPrograms(list)
+        }
+      } catch (e) {
+        // ignore and fallback
+      }
+
+      try {
+        const stored = localStorage.getItem('learningPrograms')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0 && !cancelled) {
+            setPrograms(parsed)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load programs from localStorage')
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   const slides = [
     '/assets/learning1.jpg',
     '/assets/learning2.jpg',
     '/assets/learning3.jpg',
     '/assets/learning4.jpg'
-  ]
-
-  const programs = [
-    {
-      id: 1,
-      title: 'Free AI Workshop - Python Programming & AI Fundamentals',
-      image: './assets/aipython.png',
-      badge: 'Join Free',
-      badgeColor: 'bg-green-500',
-      features: [
-        'Python Basics & Syntax',
-        'Introduction to AI & Machine Learning',
-        'Hands-on Coding Practice',
-        'Real-World AI Applications'
-      ],
-      price: null
-    },
-    {
-      id: 2,
-      title: 'Free Masterclass - Full Stack Web Development',
-      image: './assets/fullstack.png',
-      badge: 'Join Free',
-      badgeColor: 'bg-green-500',
-      features: [
-        'HTML, CSS & JavaScript Fundamentals',
-        'React & Modern Frameworks',
-        'Backend Development Basics',
-        'Live Project Demo & Q&A'
-      ],
-      price: null
-    },
-    {
-      id: 3,
-      title: 'Data Science & AI Career Bootcamp',
-      image: './assets/datascience.png',
-      badge: 'Premium Workshop',
-      badgeColor: 'bg-yellow-500',
-      features: [
-        'Data Analysis & Visualization',
-        'Machine Learning Algorithms',
-        'Portfolio Building & Projects',
-        'Tech Career Guidance & Interview Prep'
-      ],
-      price: {
-        current: '৳799',
-        original: '৳1500'
-      }
-    }
   ]
 
   const features = [
@@ -102,6 +112,8 @@ const LearningCenter = () => {
   const handleDotClick = (index) => {
     setCurrentSlide(index)
   }
+
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-emerald-900 via-emerald-900 to-emerald-900">
@@ -206,7 +218,7 @@ const LearningCenter = () => {
                 <h3 className="text-xl font-bold text-gray-900 mb-4">{program.title}</h3>
                 
                 <div className="space-y-2 mb-6 flex-grow">
-                  {program.features.map((feature, index) => (
+                  {(program.features || []).map((feature, index) => (
                     <div key={index} className="flex items-start gap-2 text-sm text-gray-600">
                       <i className="fas fa-check-circle text-green-600 mt-1"></i>
                       <span>{feature}</span>
@@ -221,12 +233,9 @@ const LearningCenter = () => {
                   </div>
                 )}
 
-                <div className="flex gap-2 mt-auto">
-                  <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition">
+                <div className="mt-auto">
+                  <button onClick={() => navigate(`/booking/${program.id}`)} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition">
                     Book Now
-                  </button>
-                  <button className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 rounded-lg font-semibold transition">
-                    View Details
                   </button>
                 </div>
               </div>

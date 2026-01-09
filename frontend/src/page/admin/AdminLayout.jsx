@@ -27,6 +27,7 @@ const AdminLayout = () => {
     { path: '/admin/users', label: 'Students', icon: '👥' },
     { path: '/admin/instructors', label: 'Instructors', icon: '👩‍🏫' },
     { path: '/admin/courses', label: 'Courses', icon: '📚' },
+    { path: '/admin/programs', label: 'Programs', icon: '🎓' },
     { path: '/admin/payments', label: 'Payments', icon: '💳' },
     { path: '/admin/analytics', label: 'Analytics', icon: '📈' }
   ]

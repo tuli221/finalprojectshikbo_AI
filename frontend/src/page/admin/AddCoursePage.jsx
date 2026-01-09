@@ -113,10 +113,13 @@ const AddCoursePage = () => {
   }
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow">
-      <div className="mb-6">
-        <h3 className="text-2xl font-semibold mb-2">Add New Course</h3>
-        <p className="text-gray-600">Fill in the details to create a new course</p>
+    <div className="bg-white p-8 rounded-2xl shadow relative">
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h3 className="text-2xl font-semibold mb-2">Add New Course</h3>
+          <p className="text-gray-600">Fill in the details to create a new course</p>
+        </div>
+        
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

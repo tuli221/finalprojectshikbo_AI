@@ -78,7 +78,7 @@ const DashboardPage = () => {
           <div className="bg-white p-8 rounded-2xl shadow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Recent Users</h3>
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="Search user..."
@@ -86,7 +86,10 @@ const DashboardPage = () => {
                   onChange={(e) => setSearchUser(e.target.value)}
                   className="px-3 py-2 border rounded-lg text-sm"
                 />
-                <button className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow">
+                <button
+                  className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow"
+                  onClick={() => navigate('/admin/users', { state: { openAdd: true } })}
+                >
                   + New
                 </button>
               </div>

@@ -28,6 +28,7 @@ const EditCourseInformation = () => {
       ]
     }
   ])
+  const [expandedModules, setExpandedModules] = useState([])
 
   // Fetch course information to edit
   useEffect(() => {
@@ -100,12 +101,27 @@ const EditCourseInformation = () => {
         }
       ]
     }])
+    setExpandedModules(prev => [...prev, false])
   }
 
   const removeModule = (moduleIndex) => {
     if (modules.length > 1) {
       setModules(modules.filter((_, index) => index !== moduleIndex))
+      setExpandedModules(prev => prev.filter((_, i) => i !== moduleIndex))
     }
+  }
+
+  useEffect(() => {
+    // initialize collapsed state for each module when modules length changes
+    setExpandedModules(modules.map(() => false))
+  }, [modules.length])
+
+  const toggleModule = (index) => {
+    setExpandedModules(prev => {
+      const copy = [...prev]
+      copy[index] = !copy[index]
+      return copy
+    })
   }
 
   const addLesson = (moduleIndex) => {
@@ -247,118 +263,34 @@ const EditCourseInformation = () => {
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {modules.map((module, moduleIndex) => (
-                  <div key={moduleIndex} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-700">
-                        Module {moduleIndex + 1}
-                      </h3>
+                  <div key={moduleIndex} className="flex items-center justify-between bg-slate-800 text-white rounded-lg p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 flex items-center justify-center bg-emerald-400 text-slate-900 rounded-full font-semibold">
+                        {moduleIndex + 1}
+                      </div>
+                      <div className="text-lg font-medium">{module.module_title || `Module ${moduleIndex + 1}`}</div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => removeModule(moduleIndex)}
-                        className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+                        onClick={() => toggleModule(moduleIndex)}
+                        aria-expanded={!!expandedModules[moduleIndex]}
+                        className="p-2 rounded-full bg-slate-700 hover:bg-slate-600"
                       >
-                         Remove
+                        <svg className={expandedModules[moduleIndex] ? 'w-5 h-5 rotate-90 text-slate-300' : 'w-5 h-5 text-slate-300'} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </button>
                     </div>
 
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Module Title <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={module.module_title}
-                          onChange={(e) => handleModuleChange(moduleIndex, 'module_title', e.target.value)}
-                          required
-                          placeholder="e.g., Introduction to Web Development"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                    {expandedModules[moduleIndex] && (
+                      <div className="w-full mt-3 text-sm text-slate-200">
+                        {module.module_description || 'No description provided.'}
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Module Description
-                        </label>
-                        <textarea
-                          value={module.module_description}
-                          onChange={(e) => handleModuleChange(moduleIndex, 'module_description', e.target.value)}
-                          rows="3"
-                          placeholder="Brief description of what this module covers..."
-                          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      {/* Lessons */}
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <h4 className="text-md font-semibold text-gray-700">Lessons</h4>
-                          <button
-                            type="button"
-                            onClick={() => addLesson(moduleIndex)}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                          >
-                            + Add Lesson
-                          </button>
-                        </div>
-
-                        <div className="space-y-3">
-                          {module.lessons.map((lesson, lessonIndex) => (
-                            <div key={lessonIndex} className="bg-white p-4 rounded-lg border border-gray-200">
-                              <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm font-medium text-gray-600">
-                                  Lesson {lessonIndex + 1}
-                                </span>
-                                {module.lessons.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeLesson(moduleIndex, lessonIndex)}
-                                    className="text-red-500 text-sm hover:text-red-700"
-                                  >
-                                    Remove
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div className="md:col-span-2">
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                                    Lesson Title <span className="text-red-500">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={lesson.lesson_title}
-                                    onChange={(e) => handleLessonChange(moduleIndex, lessonIndex, 'lesson_title', e.target.value)}
-                                    required
-                                    placeholder="e.g., HTML Basics"
-                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                                    Duration (min) <span className="text-red-500">*</span>
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={lesson.lesson_duration}
-                                    onChange={(e) => handleLessonChange(moduleIndex, lessonIndex, 'lesson_duration', e.target.value)}
-                                    required
-                                    min="1"
-                                    placeholder="30"
-                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                                  />
-                                </div>
-
-                                {/* PDF uploads removed - lessons only contain title and duration */}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\CourseInformationController;
+use App\Http\Controllers\Api\ProgramController;
 use App\Models\User;
 use Illuminate\Http\Request as HttpRequest;
 
@@ -103,6 +104,43 @@ Route::middleware('auth:sanctum')->group(function () {
 
         return response()->json(['message' => 'Password updated']);
     });
+
+    // Allow authenticated user to unenroll from their assigned course
+    Route::post('/user/unenroll', function (Illuminate\Http\Request $request) {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['message' => 'Not authenticated'], 401);
+        }
+
+        $oldCourseId = $user->course_id;
+        if (! $oldCourseId) {
+            return response()->json(['message' => 'No enrolled course'], 400);
+        }
+
+        // decrement enrolled_count on old course
+        try {
+            $oldCourse = \App\Models\Course::find($oldCourseId);
+            if ($oldCourse && ($oldCourse->enrolled_count ?? 0) > 0) {
+                $oldCourse->enrolled_count = max(0, ($oldCourse->enrolled_count ?? 0) - 1);
+                $oldCourse->save();
+            }
+        } catch (\Exception $e) {}
+
+        // remove pivot entry if exists
+        try {
+            \Illuminate\Support\Facades\DB::table('course_user')
+                ->where('user_id', $user->id)
+                ->where('course_id', $oldCourseId)
+                ->delete();
+        } catch (\Exception $e) {}
+
+        // clear user's course assignment
+        $user->course_id = null;
+        $user->enrollment_date = null;
+        $user->save();
+
+        return response()->json(['message' => 'Unenrolled successfully', 'user' => $user->load('course')]);
+    });
 });
 
 // Public routes - anyone can view
@@ -113,6 +151,15 @@ Route::get('/instructors/featured', [InstructorController::class, 'featured']);
 Route::get('/instructors/{id}', [InstructorController::class, 'show']);
 // Allow users to submit instructor requests (creates a Pending instructor profile)
 Route::post('/instructors/requests', [InstructorController::class, 'submitRequest']);
+
+// Learning Center Programs (public)
+Route::get('/programs', [ProgramController::class, 'index']);
+Route::get('/programs/{id}', [ProgramController::class, 'show']);
+
+// Public booking endpoint - creates a booking and sends confirmation email
+Route::post('/bookings', [\App\Http\Controllers\Api\BookingController::class, 'store']);
+// Allow fetching bookings (admin UI or debugging)
+Route::get('/bookings', [\App\Http\Controllers\Api\BookingController::class, 'index']);
 
 // Course Information routes
 Route::get('/course-information', [CourseInformationController::class, 'index']);
@@ -231,4 +278,9 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         $students = User::where('role', 'student')->whereIn('course_id', $courseIds)->with('course')->get();
         return response()->json($students);
     });
+
+    // Programs management (admin only)
+    Route::post('/programs', [ProgramController::class, 'store']);
+    Route::put('/programs/{id}', [ProgramController::class, 'update']);
+    Route::delete('/programs/{id}', [ProgramController::class, 'destroy']);
 });
