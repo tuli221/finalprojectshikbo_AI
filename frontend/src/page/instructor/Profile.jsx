@@ -377,7 +377,7 @@ const Profile = () => {
 
       {/* Danger Zone */}
       <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-red-200">
-        <h3 className="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
+        <h3 className="text-lg font-bold text-red-600 mb-2">Cusion</h3>
         <p className="text-gray-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
         <button
           onClick={handleDelete}

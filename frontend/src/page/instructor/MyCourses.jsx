@@ -1,7 +1,9 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const MyCourses = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +54,7 @@ const MyCourses = () => {
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Lessons</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -70,6 +73,14 @@ const MyCourses = () => {
                     <span className={`px-2 py-1 text-xs rounded ${course.status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                       {course.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <button
+                      onClick={() => navigate(`/instructor/courses/${course.id}/modules`)}
+                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition text-xs font-medium"
+                    >
+                      Add Modules
+                    </button>
                   </td>
                 </tr>
               ))}

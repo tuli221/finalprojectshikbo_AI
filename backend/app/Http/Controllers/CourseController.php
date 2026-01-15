@@ -127,6 +127,7 @@ class CourseController extends Controller
             'discount_price' => 'sometimes|numeric|min:0',
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'sometimes|in:Draft,Published,Archived',
+            'instructor_id' => 'nullable|exists:users,id',
             'instructor_profile_id' => 'nullable|exists:instructors,id',
             'language' => 'nullable|string',
             'requirements' => 'nullable|string',
@@ -146,6 +147,17 @@ class CourseController extends Controller
         }
 
         $course->update($request->except(['thumbnail', 'instructor_id']));
+
+        // If instructor_id is provided, update it and also set denormalized instructor name
+        if ($request->filled('instructor_id')) {
+            $course->instructor_id = $request->instructor_id;
+            // Also update instructor name column if it exists
+            if (Schema::hasColumn('courses', 'instructor')) {
+                $instructorUser = \App\Models\User::find($request->instructor_id);
+                $course->instructor = $instructorUser ? $instructorUser->name : 'Unknown';
+            }
+            $course->save();
+        }
 
         return response()->json([
             'message' => 'Course updated successfully',
@@ -204,8 +216,10 @@ class CourseController extends Controller
         }
 
         // Fetch courses assigned to this instructor via instructor_id
+        // include enrollments count so frontend can display student numbers
         $courses = Course::where('instructor_id', $user->id)
             ->with(['instructor', 'instructorProfile'])
+            ->withCount('enrollments')
             ->latest()
             ->get();
             

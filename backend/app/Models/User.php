@@ -83,6 +83,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Enrollments (historical) relation.
+     */
+    public function enrollments()
+    {
+        return $this->hasMany(\App\Models\Enrollment::class);
+    }
+
+    /**
      * Computed status attribute.
      * - Non-students are considered active.
      * - Students without any assigned/purchased course are 'inactive'.

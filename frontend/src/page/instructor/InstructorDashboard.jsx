@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import MyCourses from './MyCourses'
 import Students from './Students'
 import Messages from './Messages'
 import Profile from './Profile'
+import InstructorRequest from './InstructorRequest'
+import RequestPending from './RequestPending'
 import { useAuth } from '../../context/AuthContext'
 import courseApi from '../../config/courseApi'
+import { instructorApi } from '../../config/instructorApi'
 
 const InstructorDashboard = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user } = useAuth()
 
   const [totalCourses, setTotalCourses] = useState(0)
@@ -17,10 +21,73 @@ const InstructorDashboard = () => {
   const [myCourses, setMyCourses] = useState([])
   const [totalViews, setTotalViews] = useState(0)
   const [completionRate, setCompletionRate] = useState(0)
+  const [instructorStatus, setInstructorStatus] = useState('loading') // loading, no-profile, pending, approved, declined
 
+
+  // Check instructor profile status on mount
+  useEffect(() => {
+    let mounted = true
+    const checkInstructorStatus = async () => {
+      if (!user?.id) return
+      try {
+        // Check if instructor profile exists
+        const profiles = await instructorApi.getAll()
+        const profile = profiles.find(p => p.user_id === user.id || p.email === user.email)
+        if (profile) {
+          if (profile.status === 'Approved') {
+            if (mounted) setInstructorStatus('approved')
+            localStorage.removeItem('instructor_request_sent')
+            return
+          } else if (profile.status === 'Declined' || profile.status === 'Rejected') {
+            if (mounted) setInstructorStatus('declined')
+            return
+          }
+        }
+
+        // Check if there's a pending request
+        const requests = await instructorApi.getRequests()
+        const request = requests.find(r => r.email === user.email)
+        if (request && request.status === 'Pending') {
+          if (mounted) setInstructorStatus('pending')
+          return
+        }
+
+        // No profile or request found
+        if (mounted) setInstructorStatus('no-profile')
+      } catch (err) {
+        console.error('Error checking instructor status:', err)
+        if (mounted) setInstructorStatus('no-profile')
+      }
+    }
+    checkInstructorStatus()
+    return () => { mounted = false }
+  }, [user])
 
   const renderContent = () => {
     const path = location.pathname
+    
+    // Handle instructor status first
+    if (instructorStatus === 'loading') {
+      return <div className="text-center py-16">Loading...</div>
+    }
+    if (instructorStatus === 'no-profile') {
+      return <InstructorRequest />
+    }
+    if (instructorStatus === 'pending') {
+      return <RequestPending />
+    }
+    if (instructorStatus === 'declined') {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-red-50">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md text-center">
+            <div className="text-red-600 text-6xl mb-4">✖</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Request Declined</h2>
+            <p className="text-gray-600 mb-6">Your instructor request has been declined by the admin.</p>
+            <button onClick={() => { localStorage.clear(); navigate('/login') }} className="px-6 py-2 bg-red-500 text-white rounded-lg">Logout</button>
+          </div>
+        </div>
+      )
+    }
     
     if (path === '/instructor/my-courses') return <MyCourses />
     if (path === '/instructor/students') return <Students />

@@ -11,6 +11,7 @@ const CourseDetailsPage = () => {
   const [course, setCourse] = useState(courseDetailsData[courseId] ?? null)
   const [expandedModules, setExpandedModules] = useState({})
   const [loading, setLoading] = useState(false)
+  const [enrolling, setEnrolling] = useState(false)
 
   useEffect(() => {
     // If static data exists, still fetch course from API only when missing; always fetch course info separately
@@ -113,6 +114,40 @@ const CourseDetailsPage = () => {
     }))
   }
 
+  const handleEnroll = async () => {
+    if (!localStorage.getItem('auth_token')) {
+      navigate('/login', { state: { from: `/course/${courseId}` } })
+      return
+    }
+
+    try {
+      setEnrolling(true)
+      const res = await api.post('/sslcommerz/initiate', { course_id: course.id })
+      const redirectUrl = res?.data?.redirect_url || res?.data?.url || res?.data?.GatewayPageURL || res?.data?.data?.redirect_url
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl
+        return
+      }
+
+      if (typeof res?.data === 'string' && res.data.includes('<form')) {
+        const w = window.open('', '_blank')
+        if (w) {
+          w.document.write(res.data)
+          w.document.close()
+        }
+        return
+      }
+
+      alert('Unable to initiate payment. Please try again later.')
+    } catch (e) {
+      console.error('Payment initiation failed', e)
+      alert('Payment initiation failed. Please try again.')
+    } finally {
+      setEnrolling(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -201,8 +236,12 @@ const CourseDetailsPage = () => {
                 <p className="text-gray-400 line-through">{originalPrice ? `৳${originalPrice}` : ''}</p>
                 <p className="text-gray-300 text-sm mb-6">One-time payment</p>
 
-                <button className="w-full bg-green-500 hover:bg-green-600 text-gray-900 font-semibold py-3 rounded-xl text-lg transition shadow-inner">
-                  Enroll Now
+                <button
+                  onClick={handleEnroll}
+                  disabled={enrolling}
+                  className={`w-full text-gray-900 font-semibold py-3 rounded-xl text-lg transition shadow-inner ${enrolling ? 'bg-green-300 pointer-events-none' : 'bg-green-500 hover:bg-green-600'}`}
+                >
+                  {enrolling ? 'Redirecting...' : 'Enroll Now'}
                 </button>
               </div>
             </div>

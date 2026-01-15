@@ -146,6 +146,17 @@ export const instructorApi = {
     }
   },
 
+  // Decline a pending request (admin)
+  declineRequest: async (id) => {
+    try {
+      const response = await api.post(`/admin/instructors/requests/${id}/decline`);
+      return response.data;
+    } catch (error) {
+      console.error('Error declining instructor request:', error);
+      throw error;
+    }
+  },
+
   // Delete a pending request (admin)
   deleteRequest: async (id) => {
     try {

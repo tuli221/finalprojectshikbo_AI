@@ -43,7 +43,13 @@ const Navbar = ({ hideLogin = false }) => {
     <nav className="flex justify-between items-center px-8 py-5 bg-white/80 shadow-md sticky top-0 z-50 backdrop-blur-sm">
       {/* Logo */}
       <div className="flex items-center">
-        <img src="/assets/downloadShikbo.png" alt="Shikhbo.AI Logo" className="h-10" />
+        <button
+          onClick={() => navigate('/')}
+          aria-label="Go to home"
+          className="p-0 bg-transparent border-0"
+        >
+          <img src="/assets/downloadShikbo.png" alt="Shikhbo.AI Logo" className="h-10" />
+        </button>
       </div>
 
       {/* Desktop Menu */}
@@ -52,7 +58,7 @@ const Navbar = ({ hideLogin = false }) => {
         <li><Link to="/courses" className={`hover:text-green-500 ${location.pathname === '/courses' ? 'text-green-500 underline' : ''}`}>Courses</Link></li>
         <li><Link to="/learning-center" className={`hover:text-green-500 ${location.pathname === '/learning-center' ? 'text-green-500 underline' : ''}`}>Learning center</Link></li>
         <li><Link to="/instructors" className={`hover:text-green-500 ${location.pathname === '/instructors' ? 'text-green-500 underline' : ''}`}>Instructors</Link></li>
-        <li><Link to="/leaderboard" className={`hover:text-green-500 ${location.pathname === '/leaderboard' ? 'text-green-500 underline' : ''}`}>Leaderboard</Link></li>
+        <li><Link to="/leaderboard" className={`hover:text-green-500 ${location.pathname.includes('/leaderboard') ? 'text-green-500 underline' : ''}`}>Leaderboard</Link></li>
         
         {/* Show login button only if not authenticated */}
         {!hideLogin && !isAuthenticated() && (
@@ -125,7 +131,7 @@ const Navbar = ({ hideLogin = false }) => {
             <li><Link to="/courses" onClick={handleLinkClick} className={`hover:text-green-500 ${location.pathname === '/courses' ? 'text-green-500 underline' : ''}`}>Courses</Link></li>
             <li><Link to="/learning-center" onClick={handleLinkClick} className={`hover:text-green-500 ${location.pathname === '/learning-center' ? 'text-green-500 underline' : ''}`}>Learning center</Link></li>
             <li><Link to="/instructors" onClick={handleLinkClick} className={`hover:text-green-500 ${location.pathname === '/instructors' ? 'text-green-500 underline' : ''}`}>Instructors</Link></li>
-            <li><Link to="/leaderboard" onClick={handleLinkClick} className={`hover:text-green-500 ${location.pathname === '/leaderboard' ? 'text-green-500 underline' : ''}`}>Leaderboard</Link></li>
+            <li><Link to="/leaderboard" onClick={handleLinkClick} className={`hover:text-green-500 ${location.pathname.includes('/leaderboard') ? 'text-green-500 underline' : ''}`}>Leaderboard</Link></li>
             
             {/* Show login button only if not authenticated */}
             {!hideLogin && !isAuthenticated() && (

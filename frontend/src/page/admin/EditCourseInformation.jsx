@@ -254,13 +254,6 @@ const EditCourseInformation = () => {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Course Modules</h2>
-                <button
-                  type="button"
-                  onClick={addModule}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  + Add Module
-                </button>
               </div>
 
               <div className="space-y-4">

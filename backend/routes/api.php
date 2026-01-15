@@ -36,6 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'apiResend']);
     // Student dashboard
     Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard']);
+    // Student payments (for report page)
+    Route::get('/student/payments', [\App\Http\Controllers\Api\PaymentController::class, 'listForUser']);
     // Update authenticated user's profile (including student profile fields)
     Route::put('/user/profile', function (Illuminate\Http\Request $request) {
         $user = $request->user();
@@ -141,6 +143,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         return response()->json(['message' => 'Unenrolled successfully', 'user' => $user->load('course')]);
     });
+
+    // Initiate SSLCommerz payment (creates payment record and returns redirect URL)
+    Route::post('/sslcommerz/initiate', [\App\Http\Controllers\Api\PaymentController::class, 'initiate']);
 });
 
 // Public routes - anyone can view
@@ -151,6 +156,19 @@ Route::get('/instructors/featured', [InstructorController::class, 'featured']);
 Route::get('/instructors/{id}', [InstructorController::class, 'show']);
 // Allow users to submit instructor requests (creates a Pending instructor profile)
 Route::post('/instructors/requests', [InstructorController::class, 'submitRequest']);
+// Public endpoint to check if email is declined
+Route::post('/instructors/check-declined', function(Illuminate\Http\Request $request) {
+    $email = $request->input('email');
+    if (!$email) {
+        return response()->json(['declined' => false]);
+    }
+    
+    $declined = \App\Models\InstructorRequest::where('email', $email)
+        ->where('status', 'Declined')
+        ->exists();
+    
+    return response()->json(['declined' => $declined]);
+});
 
 // Learning Center Programs (public)
 Route::get('/programs', [ProgramController::class, 'index']);
@@ -160,6 +178,12 @@ Route::get('/programs/{id}', [ProgramController::class, 'show']);
 Route::post('/bookings', [\App\Http\Controllers\Api\BookingController::class, 'store']);
 // Allow fetching bookings (admin UI or debugging)
 Route::get('/bookings', [\App\Http\Controllers\Api\BookingController::class, 'index']);
+
+// Simulated gateway redirect and callback for testing
+Route::get('/sslcommerz/redirect/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'gatewayRedirect']);
+Route::post('/sslcommerz/callback/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'callback']);
+// Fetch payment by transaction id (public)
+Route::get('/sslcommerz/payment/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'getPayment']);
 
 // Course Information routes
 Route::get('/course-information', [CourseInformationController::class, 'index']);
@@ -189,6 +213,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/courses', [CourseController::class, 'getAllCourses']);
     Route::post('/courses', [CourseController::class, 'store']);
     Route::put('/courses/{id}', [CourseController::class, 'update']);
+    Route::post('/courses/{id}', [CourseController::class, 'update']); // Support _method=PUT for FormData
     Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
     
     // Get users who have approved instructor profiles (admin)
@@ -211,6 +236,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     // Instructor requests management (admin)
     Route::get('/instructors/requests', [InstructorController::class, 'listRequests']);
     Route::post('/instructors/requests/{id}/approve', [InstructorController::class, 'approveRequest']);
+    Route::post('/instructors/requests/{id}/decline', [InstructorController::class, 'declineRequest']);
     Route::delete('/instructors/requests/{id}', [InstructorController::class, 'deleteRequest']);
 
     // Student management (admin)
@@ -274,9 +300,52 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         if (!$user || $user->role !== 'instructor') {
             return response()->json(['message' => 'Only instructors can access'], 403);
         }
+
         $courseIds = \App\Models\Course::where('instructor_id', $user->id)->pluck('id')->toArray();
-        $students = User::where('role', 'student')->whereIn('course_id', $courseIds)->with('course')->get();
-        return response()->json($students);
+
+        // Collect students from enrollments (preferred) and legacy user.course_id
+        $results = [];
+
+        try {
+            $enrollments = \App\Models\Enrollment::whereIn('course_id', $courseIds)
+                ->with(['user', 'course'])
+                ->orderBy('enrolled_at', 'desc')
+                ->get();
+
+            foreach ($enrollments as $en) {
+                $u = $en->user;
+                if (! $u) continue;
+                $results[$u->id] = [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'role' => $u->role,
+                    'course' => $en->course ? $en->course->only(['id','title']) : null,
+                    'enrollment_date' => $en->enrolled_at ? $en->enrolled_at->toDateString() : ($u->enrollment_date ? $u->enrollment_date : null),
+                ];
+            }
+        } catch (\Exception $e) {
+            // If enrollments table absent or error, ignore and fall back to legacy
+        }
+
+        // Legacy assignments via users.course_id
+        try {
+            $legacy = User::where('role', 'student')->whereIn('course_id', $courseIds)->with('course')->get();
+            foreach ($legacy as $u) {
+                if (isset($results[$u->id])) continue;
+                $results[$u->id] = [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'role' => $u->role,
+                    'course' => $u->course ? $u->course->only(['id','title']) : null,
+                    'enrollment_date' => $u->enrollment_date ? $u->enrollment_date : null,
+                ];
+            }
+        } catch (\Exception $e) {}
+
+        // Return values
+        return response()->json(array_values($results));
     });
 
     // Programs management (admin only)

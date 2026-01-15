@@ -25,52 +25,39 @@ const InstructorRequest = () => {
   })
 
   useEffect(() => {
-    // Check if user has an approved instructor profile
-    // When backend creates instructor profile, user.role = 'instructor' but we need to check the actual profile
-    const checkApprovalStatus = async () => {
-      if (user?.role === 'instructor' && user?.id) {
-        try {
-          // Check if instructor profile exists (means approved)
-          const response = await fetch(`http://localhost:8000/api/instructors?user_id=${user.id}`)
-          const data = await response.json()
-          if (data && data.length > 0) {
-            // Instructor profile exists, user is approved
-            setIsApproved(true)
-            localStorage.removeItem('instructor_request_sent')
-            localStorage.removeItem('instructor_request_data')
-            return
-          }
-        } catch (err) {
-          console.log('Could not check instructor status:', err)
-        }
+    const checkStatus = async () => {
+      if (!user?.email) {
+        setShowForm(true)
+        return
       }
-    }
-
-    checkApprovalStatus()
-
-    // Check if there's a pending request
-    const requestSent = localStorage.getItem('instructor_request_sent')
-    const savedData = localStorage.getItem('instructor_request_data')
-    
-    if (requestSent === '1' && savedData) {
       try {
-        const parsedData = JSON.parse(savedData)
-        // Only show pending if it belongs to current logged-in user
-        if (parsedData?.email && user?.email && parsedData.email.toLowerCase() === user.email.toLowerCase()) {
-          setHasPendingRequest(true)
-          setFormData(prev => ({ ...prev, ...parsedData }))
-        } else {
-          // Different user, show form
-          setShowForm(true)
+        // Check if instructor profile exists (approved)
+        const profiles = await instructorApi.getAll()
+        const profile = profiles.find(p => p.user_id === user.id || p.email === user.email)
+        if (profile && profile.status === 'Approved') {
+          setIsApproved(true)
+          localStorage.removeItem('instructor_request_sent')
+          localStorage.removeItem('instructor_request_data')
+          return
         }
+
+        // Check if there's a pending request
+        const requests = await instructorApi.getRequests()
+        const request = requests.find(r => r.email === user.email)
+        if (request && request.status === 'Pending') {
+          setHasPendingRequest(true)
+          setShowForm(false)
+          return
+        }
+
+        // No profile or pending request, show form
+        setShowForm(true)
       } catch (err) {
-        // Parsing error, show form
+        console.error('Error checking instructor status:', err)
         setShowForm(true)
       }
-    } else {
-      // No pending request, show form
-      setShowForm(true)
     }
+    checkStatus()
   }, [user])
 
   const handleInputChange = (e) => {

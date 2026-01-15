@@ -15,22 +15,40 @@ const ChatButton = ({ isOpen, setIsOpen }) => {
     "Many students find our project-based approach very effective for learning."
   ]
 
+  // Preset question => answer pairs
+  const presets = [
+    { id: 1, q: 'How do I enroll in a course?', a: 'To enroll, go to the course page and click the "Enroll" button. You may need to log in first.' },
+    { id: 2, q: 'What courses are best for beginners?', a: 'For beginners we recommend "Web Development Basics" and "Introduction to Python" — both include hands-on projects.' },
+    { id: 3, q: 'Are there any discounts or scholarships?', a: 'Yes — we currently offer a one-time 50% discount on the full course fee when you make a single upfront payment. Check the Promotions section or contact support to claim this offer.' },
+    { id: 4, q: 'Do you provide certificates?', a: 'Yes — we provide completion certificates for many courses. Certificates appear on your dashboard after finishing required coursework.' },
+    { id: 5, q: 'How can I reset my password?', a: 'Use the "Forgot Password" link on the login page. You will receive an email with reset instructions.' }
+  ]
+
   const sendMessage = () => {
     if (!message.trim()) return
 
     // Add user message
     const userMessage = { type: 'user', text: message }
     setChatHistory(prev => [...prev, userMessage])
+    const userText = message.trim()
     setMessage('')
     setIsTyping(true)
 
-    // Simulate AI thinking and response
+    // Check presets for exact or case-insensitive match
+    const matched = presets.find(p => p.q.toLowerCase() === userText.toLowerCase() || userText.toLowerCase().includes(p.q.toLowerCase()))
+
     setTimeout(() => {
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
-      const aiMessage = { type: 'ai', text: randomResponse }
+      let responseText
+      if (matched) {
+        responseText = matched.a
+      } else {
+        responseText = aiResponses[Math.floor(Math.random() * aiResponses.length)]
+      }
+
+      const aiMessage = { type: 'ai', text: responseText }
       setChatHistory(prev => [...prev, aiMessage])
       setIsTyping(false)
-    }, 1500)
+    }, 900)
   }
 
   const handleKeyPress = (e) => {
@@ -86,6 +104,30 @@ const ChatButton = ({ isOpen, setIsOpen }) => {
           id="chat-messages"
           className="h-80 overflow-y-auto p-4 bg-gray-50 space-y-4"
         >
+          {/* Quick preset questions */}
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-2">
+              {presets.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    // simulate user selecting the preset question
+                    const userMessage = { type: 'user', text: p.q }
+                    setChatHistory(prev => [...prev, userMessage])
+                    setIsTyping(true)
+                    setTimeout(() => {
+                      const aiMessage = { type: 'ai', text: p.a }
+                      setChatHistory(prev => [...prev, aiMessage])
+                      setIsTyping(false)
+                    }, 700)
+                  }}
+                  className="text-xs bg-white border border-gray-200 px-3 py-1 rounded-full hover:bg-green-50"
+                >
+                  {p.q}
+                </button>
+              ))}
+            </div>
+          </div>
           {chatHistory.length === 0 && (
             <div className="text-center text-gray-500 text-sm">
               <i className="fa-solid fa-robot text-2xl mb-2 text-primary"></i>

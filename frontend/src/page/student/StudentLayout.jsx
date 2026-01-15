@@ -7,7 +7,7 @@ const links = [
 	{ to: '/student', label: 'Dashboard', icon: '🏠', end: true },
 	{ to: '/student/my-courses', label: 'My Courses', icon: '📚' },
 	{ to: '/student/leaderboard', label: 'Leaderboard', icon: '📊' },
-	{ to: '/student/community', label: 'Community', icon: '💬' },
+	{ to: '/student/report', label: 'Report', icon: '📄' },
 	{ to: '/student/settings', label: 'Settings', icon: '⚙️' }
 ]
 

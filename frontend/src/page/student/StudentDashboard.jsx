@@ -24,7 +24,18 @@ export default function StudentDashboard() {
         const res = await api.get('/student/dashboard')
         if (!mounted) return
         setStats(res.data.stats || defaultStats)
-        setCourses(res.data.recommended || [])
+        // Remove any courses the user is already enrolled in so recommendations don't show enrolled courses
+        const recommended = res.data.recommended || []
+        const user = res.data.user || null
+        const enrolledIds = []
+        if (user) {
+          if (Array.isArray(user.enrollments)) {
+            user.enrollments.forEach(e => { if (e && e.course_id) enrolledIds.push(Number(e.course_id)) })
+          }
+          if (user.course && user.course.id) enrolledIds.push(Number(user.course.id))
+        }
+        const filtered = recommended.filter(c => !enrolledIds.includes(Number(c.id)))
+        setCourses(filtered)
       } catch (e) {
         // if unauthorized, redirect to login
         if (e.response?.status === 401 || e.response?.status === 403) {

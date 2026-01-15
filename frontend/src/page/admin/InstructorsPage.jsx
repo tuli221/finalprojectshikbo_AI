@@ -8,6 +8,7 @@ const InstructorsPage = () => {
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedInstructor, setSelectedInstructor] = useState(null)
   const [isEditMode, setIsEditMode] = useState(false)
+  const [isViewMode, setIsViewMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [instructors, setInstructors] = useState([])
   const [imagePreview, setImagePreview] = useState(null)
@@ -55,11 +56,19 @@ const InstructorsPage = () => {
     setFormData({ name: '', email: '', phone: '', age: '', title: '', role: '', company: '', specialization: '', expertise_tags: '', bio: '', status: 'Approved', image: null })
     setImagePreview(null)
     setIsEditMode(false)
+    setIsViewMode(false)
     setSelectedInstructor(null)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    // if in view-only mode, just close the modal
+    if (isViewMode) {
+      setShowAddModal(false)
+      setIsViewMode(false)
+      setSelectedInstructor(null)
+      return
+    }
     setLoading(true)
     try {
       if (isEditMode && selectedInstructor) {
@@ -79,8 +88,28 @@ const InstructorsPage = () => {
   }
 
   const handleViewDetails = (instructor) => {
+    if (!instructor) return
+    setFormData({
+      name: instructor.name || '',
+      email: instructor.email || '',
+      phone: instructor.phone || '',
+      age: instructor.age || '',
+      title: instructor.title || '',
+      role: instructor.role || '',
+      company: instructor.company || '',
+      specialization: instructor.specialization || '',
+      expertise_tags: instructor.expertise_tags || '',
+      bio: instructor.bio || '',
+      status: instructor.status || 'Approved',
+      image: null
+    })
+    if (instructor.image) setImagePreview(`http://localhost:8000/storage/${instructor.image}`)
     setSelectedInstructor(instructor)
-    setShowViewModal(true)
+    // Open the same modal in edit mode so admin can change and save
+    setIsEditMode(true)
+    setIsViewMode(false)
+    setShowViewModal(false)
+    setShowAddModal(true)
   }
 
   const handleEditClick = (instructorParam) => {
@@ -103,20 +132,37 @@ const InstructorsPage = () => {
     if (instr.image) setImagePreview(`http://localhost:8000/storage/${instr.image}`)
     setSelectedInstructor(instr)
     setIsEditMode(true)
+    setIsViewMode(false)
     setShowViewModal(false)
     setShowAddModal(true)
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this instructor?')) return
-    try {
-      if (showPendingOnly) {
-        await instructorApi.deleteRequest(id)
-      } else {
-        await instructorApi.delete(id)
+    const instructor = instructors.find(i => i.id === id)
+    if (!instructor) return
+    
+    if (instructor.status === 'Pending') {
+      // For pending requests, mark as Declined
+      if (!window.confirm('Decline this instructor request?')) return
+      try {
+        await instructorApi.declineRequest(id)
+        fetchInstructors()
+      } catch (err) { 
+        console.error(err)
+        alert(err.response?.data?.message || 'Failed to decline request') 
       }
-      fetchInstructors()
-    } catch (err) { console.error(err); alert('Failed to delete') }
+    } else {
+      // For approved instructors, delete normally
+      if (!window.confirm('Delete this instructor?')) return
+      try {
+        if (showPendingOnly) {
+          await instructorApi.deleteRequest(id)
+        } else {
+          await instructorApi.delete(id)
+        }
+        fetchInstructors()
+      } catch (err) { console.error(err); alert('Failed to delete') }
+    }
   }
 
   const filteredInstructors = instructors.filter(i => {
@@ -155,7 +201,7 @@ const InstructorsPage = () => {
 
             <div className="flex gap-2">
               <button onClick={() => handleViewDetails(instructor)} className="flex-1 px-3 py-2 bg-gray-200 rounded-lg text-sm">View</button>
-              <button onClick={() => handleDelete(instructor.id)} className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm">Delete</button>
+              <button onClick={() => handleDelete(instructor.id)} className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm">Decline</button>
               {instructor.status === 'Pending' && (
                 <button onClick={async () => {
                   if (!window.confirm('Approve?')) return;
@@ -200,21 +246,54 @@ const InstructorsPage = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold">{isEditMode ? 'Edit Instructor' : 'Add Instructor'}</h3>
+              <h3 className="text-xl font-semibold">{isViewMode ? 'View Instructor' : (isEditMode ? 'Edit Instructor' : 'Add Instructor')}</h3>
               <button onClick={() => { setShowAddModal(false); resetForm() }} className="text-2xl">✖</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm">Full Name</label>
-                <input name="name" value={formData.name} onChange={handleInputChange} className="w-full border rounded px-3 py-2" required />
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-sm">Full Name</label>
+                  <input name="name" value={formData.name} onChange={handleInputChange} className="w-full border rounded px-3 py-2" required disabled={isViewMode} />
+                </div>
+                <div>
+                  <label className="block text-sm">Email</label>
+                  <input name="email" value={formData.email} onChange={handleInputChange} className="w-full border rounded px-3 py-2" required disabled={isViewMode} />
+                </div>
+                <div>
+                  <label className="block text-sm">Specialization</label>
+                  <select name="specialization" value={formData.specialization} onChange={handleInputChange} className="w-full border rounded px-3 py-2" disabled={isViewMode}>
+                    <option value="">Select specialization</option>
+                    <option>Web Development</option>
+                    <option>Mobile Development</option>
+                    <option>Data Science</option>
+                    <option>AI Fundamentals</option>
+                    <option>Machine Learning</option>
+                    <option>Cloud Computing</option>
+                    <option>Cybersecurity</option>
+                    <option>DevOps</option>
+                    <option>Full-Stack Development</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm">Expertise Tags (comma separated)</label>
+                  <input name="expertise_tags" value={formData.expertise_tags} onChange={handleInputChange} className="w-full border rounded px-3 py-2" disabled={isViewMode} />
+                </div>
+                <div>
+                  <label className="block text-sm">Profile Image</label>
+                  {!isViewMode && <input type="file" accept="image/*" onChange={handleImageChange} className="w-full" />}
+                  {imagePreview && <img src={imagePreview} alt="preview" className="mt-2 w-20 h-20 object-cover rounded-full" />}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm">Email</label>
-                <input name="email" value={formData.email} onChange={handleInputChange} className="w-full border rounded px-3 py-2" required />
-              </div>
+
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => { setShowAddModal(false); resetForm() }} className="px-4 py-2 border rounded">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-green-500 text-white rounded">{loading ? 'Saving...' : (isEditMode ? 'Update' : 'Add')}</button>
+                {isViewMode ? (
+                  <button type="button" onClick={() => { setShowAddModal(false); resetForm() }} className="px-3 py-1 border rounded text-sm">Close</button>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => { setShowAddModal(false); resetForm() }} className="px-3 py-1 border rounded text-sm">Cancel</button>
+                    <button type="submit" className="px-3 py-1 bg-green-500 text-white rounded text-sm">{loading ? 'Saving...' : (isEditMode ? 'Update' : 'Add')}</button>
+                  </>
+                )}
               </div>
             </form>
           </div>

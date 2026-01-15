@@ -20,14 +20,36 @@ class StudentController extends Controller
         }
 
         // Basic stats (expand later)
-        $courseEnrolled = $user->course_id ? 1 : 0;
+        // Count enrolled courses from multiple sources so dashboard matches MyCourses/Report
+        $enrolledIds = [];
+        try {
+            // from enrollments table
+            if (method_exists($user, 'enrollments')) {
+                $enrolledIds = $user->enrollments()->pluck('course_id')->toArray();
+            }
+            // from completed payments (user may have paid but enrollment record not yet created)
+            try {
+                $paid = \App\Models\Payment::where('user_id', $user->id)->where('status', 'completed')->pluck('course_id')->toArray();
+                $enrolledIds = array_merge($enrolledIds, $paid);
+            } catch (\Exception $e) {
+                // ignore if payments table missing or query fails
+            }
+        } catch (\Exception $e) {
+            $enrolledIds = [];
+        }
+        // include legacy single assignment
+        if (! empty($user->course_id)) {
+            $enrolledIds[] = $user->course_id;
+        }
+        $enrolledIds = array_values(array_unique(array_filter($enrolledIds)));
+        $courseEnrolled = count($enrolledIds);
         $lessonsCompleted = 0; // placeholder if you add progress tracking
         $xpEarned = 0;
 
-        // recommended courses (published, exclude assigned course)
+        // recommended courses (published), exclude any courses the user is already enrolled in
         $recommended = Course::where('status', 'Published')
-            ->when($user->course_id, function ($q) use ($user) {
-                return $q->where('id', '!=', $user->course_id);
+            ->when(count($enrolledIds) > 0, function ($q) use ($enrolledIds) {
+                return $q->whereNotIn('id', $enrolledIds);
             })
             ->latest()
             ->take(6)
@@ -40,7 +62,9 @@ class StudentController extends Controller
                 'xp_earned' => $xpEarned,
             ],
             'recommended' => $recommended,
-            'user' => $user,
+            // include enrollments (history) and legacy course relation for compatibility
+            // eager-load instructor on courses so frontend can display instructor info
+            'user' => $user->load(['enrollments.course.instructor', 'course.instructor']),
         ]);
     }
 }

@@ -18,14 +18,33 @@ const DashboardPage = () => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [sRes, cRes, iRes] = await Promise.all([
+        // Fetch students, courses, admin users list and public instructor profiles
+        const [sRes, cRes, adminUsersRes, profilesRes] = await Promise.all([
           api.get('/admin/students'),
           api.get('/admin/courses'),
-          api.get('/admin/instructors/users')
+          api.get('/admin/instructors/users'),
+          api.get('/instructors')
         ])
+
         setStudents(sRes.data || [])
         setCourses(cRes.data || [])
-        setInstructors(iRes.data || [])
+
+        const adminUsers = adminUsersRes.data || []
+        const profiles = profilesRes.data || []
+
+        // Merge admin users and approved instructor profiles into one deduped list
+        const map = new Map()
+        const push = (u) => {
+          if (!u) return
+          const key = (u.email || u.id || '').toString().toLowerCase()
+          if (!map.has(key)) map.set(key, u)
+        }
+
+        adminUsers.forEach(u => push({ id: u.id, name: u.name || '', email: u.email || '', total_courses: u.total_courses }))
+        // include only approved profiles
+        profiles.filter(p => p.status === 'Approved').forEach(p => push({ id: p.user_id || p.id, name: p.name || '', email: p.email || '', total_courses: p.total_courses || p.courses || 0 }))
+
+        setInstructors(Array.from(map.values()))
       } catch (err) {
         setError(err.response?.data?.message || err.message)
       } finally {
@@ -162,7 +181,11 @@ const DashboardPage = () => {
 
             <ul className="space-y-3">
               {instructors.filter(i => i.name.toLowerCase().includes(searchInstructor.toLowerCase())).map((instructor) => {
-                const initials = instructor.name ? instructor.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() : ''
+                // Always show 2 letters: for multi-word names use first letter of each word, for single-word use first 2 chars
+                const nameParts = instructor.name ? instructor.name.trim().split(/\s+/) : []
+                const initials = nameParts.length > 1 
+                  ? nameParts.slice(0, 2).map(n => n[0]).join('').toUpperCase()
+                  : (nameParts[0] || '').substring(0, 2).toUpperCase()
                 return (
                   <li key={instructor.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50 transition">
                     <div className="flex items-center gap-3">

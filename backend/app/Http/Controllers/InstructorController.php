@@ -215,6 +215,18 @@ class InstructorController extends Controller
     }
 
     /**
+     * Decline a pending request: mark as Declined (blocks login).
+     */
+    public function declineRequest($id)
+    {
+        $req = InstructorRequest::findOrFail($id);
+        $req->status = 'Declined';
+        $req->save();
+
+        return response()->json(['message' => 'Request declined']);
+    }
+
+    /**
      * Reject/delete a pending request: remove request and optionally delete user.
      */
     public function deleteRequest($id)

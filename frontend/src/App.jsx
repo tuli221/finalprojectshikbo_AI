@@ -7,6 +7,7 @@ import RegisterPage from './page/RegisterPage'
 import OtpVerifyPage from './page/OtpVerifyPage'
 import ForgotPasswordPage from './page/ForgotPasswordPage'
 import CourseDetailsPage from './page/CourseDetailsPage'
+import PaymentSuccess from './page/PaymentSuccess'
 import CoursesPage from './page/CoursesPage'
 import CourseCard from './component/sections/Course/CourseCard'
 import AdminLayout from './page/admin/AdminLayout'
@@ -28,13 +29,16 @@ import InstructorLayout from './page/instructor/InstructorLayout'
 import InstructorDashboard from './page/instructor/InstructorDashboard'
 import InstructorRequest from './page/instructor/InstructorRequest'
 import RequestPending from './page/instructor/RequestPending'
+import ManageCourseModules from './page/instructor/ManageCourseModules'
 
 // Student imports
 import StudentLayout from './page/student/StudentLayout'
 import StudentDashboard from './page/student/StudentDashboard'
 import MyCourses from './page/student/MyCourses'
-import Community from './page/student/Community'
+import CourseViewer from './page/student/CourseViewer'
+import Report from './page/student/Report'
 import Leaderboard from './page/student/Leaderboard'
+import LeaderboardPage from './page/LeaderboardPage'
 import Settings from './page/student/Settings'
 
 // Public pages
@@ -55,7 +59,8 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/courses" element={<CoursesPage />} />
       <Route path="/course/:courseId" element={<CourseDetailsPage />} />
-      <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/payment/success/:tran" element={<PaymentSuccess />} />
+      <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="/instructors" element={<PublicInstructorsPage />} />
       <Route path="/learning-center" element={<LearningCenter />} />
       <Route path="booking/:id" element={<BookingPage />} />
@@ -76,7 +81,7 @@ function App() {
         <Route path="modules/add" element={<AddCourseInformation />} />
         <Route path="modules/edit/:id" element={<EditCourseInformation />} />
         
-        <Route path="community" element={<Community />} />
+        
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
       </Route>
@@ -85,6 +90,7 @@ function App() {
       <Route path="/instructor" element={<InstructorLayout />}>
         <Route path="dashboard" element={<InstructorDashboard />} />
         <Route path="my-courses" element={<InstructorDashboard />} />
+        <Route path="courses/:courseId/modules" element={<ManageCourseModules />} />
         <Route path="students" element={<InstructorDashboard />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="payments" element={<InstructorDashboard />} />
@@ -97,10 +103,13 @@ function App() {
         <Route index element={<StudentDashboard />} />
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="my-courses" element={<MyCourses />} />
-        <Route path="community" element={<Community />} />
+        <Route path="report" element={<Report />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="settings" element={<Settings />} />
       </Route>
+      
+      {/* Course Viewer - Full screen without layout */}
+      <Route path="/student/course/:courseId" element={<CourseViewer />} />
     </Routes>
   )
 }

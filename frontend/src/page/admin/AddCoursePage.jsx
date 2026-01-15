@@ -29,14 +29,37 @@ const AddCoursePage = () => {
   useEffect(() => {
     const token = localStorage.getItem('auth_token')
     if (!token) return
-    
-    api.get('/instructors')
-      .then(res => setInstructors((res.data || []).filter(i => i.status === 'Approved')))
-      .catch(err => console.error(err))
-    
-    api.get('/admin/instructors/users')
-      .then(res => setInstructorUsers(res.data))
-      .catch(err => console.error(err))
+
+    let mounted = true
+    const fetch = async () => {
+      try {
+        const [instRes, usersRes] = await Promise.all([
+          api.get('/instructors'),
+          api.get('/admin/instructors/users')
+        ])
+        if (!mounted) return
+
+        // approved instructor profiles (public)
+        const approved = (instRes.data || []).filter(i => i.status === 'Approved')
+        setInstructors(approved)
+
+        // merge admin users and approved instructor profiles into one deduped list
+        const adminUsers = usersRes.data || []
+        const map = new Map()
+        const push = (u) => {
+          if (!u) return
+          const key = (u.email || u.id || '').toString().toLowerCase()
+          if (!map.has(key)) map.set(key, u)
+        }
+        adminUsers.forEach(u => push({ id: u.id, name: u.name || '', email: u.email || '' }))
+        approved.forEach(p => push({ id: p.user_id || p.id, name: p.name || '', email: p.email || '' }))
+        setInstructorUsers(Array.from(map.values()))
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    fetch()
+    return () => { mounted = false }
   }, [])
 
   const handleInputChange = (e) => {
@@ -303,8 +326,16 @@ const AddCoursePage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Type <span className="text-red-500">*</span>
               </label>
-              <div className="w-full border rounded-lg px-3 py-2 text-gray-700">Offline</div>
-              <input type="hidden" name="type" value="Offline" />
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              >
+                <option value="Offline">Offline</option>
+                <option value="Online">Online</option>
+              </select>
             </div>
         </div>
 

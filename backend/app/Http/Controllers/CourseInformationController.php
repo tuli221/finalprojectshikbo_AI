@@ -47,11 +47,14 @@ class CourseInformationController extends Controller
                 ], 409);
             }
 
+            // Process file uploads and update modules
+            $modulesData = $this->processFileUploads($request);
+
             $courseInformation = CourseInformation::create([
                 'course_id' => $request->course_id,
                 'about_course' => $request->about_course,
                 'what_you_learn' => $request->what_you_learn,
-                'modules' => $request->modules,
+                'modules' => json_encode($modulesData),
             ]);
 
             return response()->json([
@@ -119,11 +122,14 @@ class CourseInformationController extends Controller
         }
 
         try {
-            $courseInformation->update($request->only([
-                'about_course',
-                'what_you_learn',
-                'modules'
-            ]));
+            // Process file uploads and update modules
+            $modulesData = $this->processFileUploads($request);
+
+            $courseInformation->update([
+                'about_course' => $request->about_course,
+                'what_you_learn' => $request->what_you_learn,
+                'modules' => json_encode($modulesData)
+            ]);
 
             return response()->json([
                 'message' => 'Course information updated successfully',
@@ -135,6 +141,58 @@ class CourseInformationController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Process file uploads for lessons
+     */
+    private function processFileUploads(Request $request)
+    {
+        $modulesJson = $request->input('modules');
+        $modulesData = json_decode($modulesJson, true);
+
+        \Log::info('Processing file uploads', ['modules_json' => $modulesJson]);
+        \Log::info('Request files', ['all_files' => $request->allFiles()]);
+
+        if (!is_array($modulesData)) {
+            \Log::warning('Modules data is not an array');
+            return [];
+        }
+
+        foreach ($modulesData as $moduleIndex => &$module) {
+            if (isset($module['lessons']) && is_array($module['lessons'])) {
+                foreach ($module['lessons'] as $lessonIndex => &$lesson) {
+                    // Check if there's a file for this lesson
+                    if (isset($lesson['file_key'])) {
+                        $fileKey = $lesson['file_key'];
+                        \Log::info('Checking for file', ['file_key' => $fileKey]);
+                        
+                        if ($request->hasFile($fileKey)) {
+                            $file = $request->file($fileKey);
+                            \Log::info('File found', ['file_name' => $file->getClientOriginalName()]);
+                            
+                            // Store file in public/storage/lessons with original extension
+                            $extension = $file->getClientOriginalExtension();
+                            $filename = uniqid() . '_' . time() . '.' . $extension;
+                            $path = $file->storeAs('lessons', $filename, 'public');
+                            \Log::info('File stored', ['path' => $path]);
+                            
+                            // Save the path in the lesson data
+                            $lesson['file_path'] = '/storage/' . $path;
+                            $lesson['file_url'] = '/storage/' . $path;
+                        } else {
+                            \Log::warning('File not found in request', ['file_key' => $fileKey]);
+                        }
+                        
+                        // Remove the file_key as it's no longer needed
+                        unset($lesson['file_key']);
+                    }
+                }
+            }
+        }
+
+        \Log::info('Processed modules data', ['modules' => $modulesData]);
+        return $modulesData;
     }
 
     /**

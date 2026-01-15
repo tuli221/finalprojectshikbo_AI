@@ -12,13 +12,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
-
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Afsana Akter',
-        //     'email' => 'afsana@gmail.com',
-        //     'password' => bcrypt('password'), // password
-        //     'role' => 'admin',
-        // ]);
+        // Seed sample instructor and courses for development
+        $this->call([SampleCoursesSeeder::class]);
     }
 }

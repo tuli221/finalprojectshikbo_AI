@@ -61,4 +61,12 @@ class Course extends Model
             ->withTimestamps()
             ->withPivot(['enrolled_at', 'progress', 'completed']);
     }
+
+    /**
+     * Enrollment records for this course.
+     */
+    public function enrollments()
+    {
+        return $this->hasMany(\App\Models\Enrollment::class);
+    }
 }

@@ -22,8 +22,25 @@ const AdminEditCourse = () => {
           api.get(`/courses/${id}`)
         ])
         if (!mounted) return
-        setInstructors(instRes.data || [])
-        setInstructorUsers(usersRes.data || [])
+        // only keep approved profiles for the instructors list
+        const approved = (instRes.data || []).filter(i => i.status === 'Approved')
+        setInstructors(approved)
+
+        // Merge admin users and approved instructor profiles into one deduped list
+        const adminUsers = usersRes.data || []
+        const map = new Map()
+        const push = (u) => {
+          if (!u) return
+          const key = (u.email || u.id || '').toString().toLowerCase()
+          if (!map.has(key)) map.set(key, u)
+        }
+        adminUsers.forEach(u => push({ id: u.id, name: u.name || '', email: u.email || '' }))
+        // include profile even when `user_id` is missing (use profile id as fallback)
+        approved.forEach(i => {
+          push({ id: i.user_id || i.id, name: i.name || '', email: i.email || '' })
+        })
+        setInstructorUsers(Array.from(map.values()))
+        
         const c = courseRes.data || {}
         setInitialValues({
           title: c.title || '',
@@ -59,6 +76,8 @@ const AdminEditCourse = () => {
     try {
       setSaving(true)
       const data = new FormData()
+      // Use Laravel method spoofing for FormData (PUT doesn't work well with FormData)
+      data.append('_method', 'PUT')
       Object.keys(values).forEach(key => {
         const val = values[key]
         if (val !== undefined && val !== null) {
@@ -68,7 +87,8 @@ const AdminEditCourse = () => {
       })
       if (thumbnailFile) data.append('thumbnail', thumbnailFile)
 
-      await api.put(`/admin/courses/${id}`, data)
+      // Use POST with _method=PUT for Laravel to properly parse FormData
+      await api.post(`/admin/courses/${id}`, data)
       alert('Course updated')
       navigate('/admin/courses')
     } catch (err) {

@@ -15,32 +15,37 @@ const MyCourses = () => {
     const fetch = async () => {
       setLoading(true)
       try {
-        // Try student dashboard first (returns user and recommended)
-        const dashRes = await api.get('/student/dashboard')
-        const dash = dashRes.data || {}
+        // load dashboard (enrollments) and payments to build unified enrolled course list
+        const [dashRes, payRes] = await Promise.all([
+          api.get('/student/dashboard').catch(() => ({ data: {} })),
+          api.get('/student/payments').catch(() => ({ data: { payments: [] } })),
+        ])
 
-        let list = []
-        // If the authenticated student has an assigned course, unenroll them first
-        const courseId = dash.user?.course_id
-        if (courseId) {
-          try {
-            // Call unenroll endpoint to remove assignment from database
-            await api.post('/user/unenroll')
-            // After unenrolling, do not show any courses
-            list = []
-          } catch (unenrollErr) {
-            // If unenroll fails (e.g., unauthorized), fall back to showing the enrolled course
-            console.error('Failed to unenroll user, falling back to showing course', unenrollErr)
-            try {
-              const course = await courseApi.getCourse(courseId)
-              list = [course]
-            } catch (innerErr) {
-              console.error('Failed to load enrolled course', innerErr)
-            }
-          }
+        const user = dashRes.data?.user || null
+        const enrollments = Array.isArray(user?.enrollments) ? user.enrollments : []
+        const paymentsList = Array.isArray(payRes.data?.payments) ? payRes.data.payments : []
+
+        // collect course objects from enrollments, payments, and legacy user.course
+        const courseMap = new Map()
+
+        // from enrollments
+        enrollments.forEach(e => {
+          const c = e.course
+          if (c && c.id) courseMap.set(String(c.id), c)
+        })
+
+        // from completed payments (only treat completed payments as enrollments)
+        paymentsList.filter(p => p.status === 'completed').forEach(p => {
+          const c = p.course
+          if (c && c.id) courseMap.set(String(c.id), c)
+        })
+
+        // legacy single assignment
+        if (user && user.course && user.course.id) {
+          courseMap.set(String(user.course.id), user.course)
         }
 
-        // Do NOT show recommended courses here — only show courses the student is enrolled in.
+        const list = Array.from(courseMap.values())
         if (mounted) setEnrolledCourses(list)
       } catch (err) {
         console.error(err)
@@ -62,11 +67,14 @@ const MyCourses = () => {
 
   const handleContinue = (course) => {
     const id = course.id || course.course_id
-    if (id) navigate(`/course/${id}`)
+    if (id) navigate(`/student/course/${id}`)
   }
 
   if (loading) return <div className="text-center py-8">Loading courses...</div>
   if (error) return <div className="text-center py-8 text-red-500">{error}</div>
+
+  console.log(enrolledCourses);
+  
 
   return (
     <div className="w-full">
@@ -91,7 +99,18 @@ const MyCourses = () => {
             const totalLessons = course.totalLessons || course.total_lessons || course.lessons_count || 0
             const completedLessons = course.completedLessons || course.completed_lessons || course.progress_steps || 0
             const progress = typeof course.progress === 'number' ? course.progress : (totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0)
-            const thumbnail = course.thumbnail || course.thumbnail_url || '/assets/downloadShikbo.png'
+            let thumbnail = course.thumbnail || course.thumbnail_url || '/assets/downloadShikbo.png'
+            // If thumbnail is a relative storage path, prefix with API base URL
+            try {
+              const base = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api\/?$/i, '') : ''
+              if (thumbnail && !thumbnail.startsWith('http') && base) {
+                // avoid duplicating /storage/ if already present
+                if (!thumbnail.startsWith('/')) thumbnail = `/${thumbnail}`
+                thumbnail = thumbnail.startsWith('http') ? thumbnail : `${base}/storage${thumbnail}`
+              }
+            } catch (e) {
+              // ignore and keep thumbnail as-is
+            }
 
             return (
               <div key={course.id || course.course_id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition">
@@ -118,9 +137,11 @@ const MyCourses = () => {
                     <span>{completedLessons}/{totalLessons} Lessons</span>
                   </div>
 
-                  <button onClick={() => handleContinue(course)} className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg transition">
-                    Continue Learning
-                  </button>
+                  {course.type === 'Online' && (
+                    <button onClick={() => handleContinue(course)} className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg transition">
+                      Continue Learning
+                    </button>
+                  )}
                 </div>
               </div>
             )
