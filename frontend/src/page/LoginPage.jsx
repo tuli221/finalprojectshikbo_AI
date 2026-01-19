@@ -149,11 +149,7 @@ const LoginPage = () => {
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          {/* Google Login */}
-          <button className="w-full flex items-center justify-center border border-gray-300 bg-green-50 text-gray-700 py-2.5 px-4 rounded-lg shadow-sm hover:bg-green-100 transition duration-150">
-            <img src="https://img.icons8.com/color/16/000000/google-logo.png" alt="Google logo" className="mr-2" />
-            <span className="font-medium">Continue with Google</span>
-          </button>
+          
 
           {/* Register Link */}
           <div className="mt-6 text-center text-sm text-black">

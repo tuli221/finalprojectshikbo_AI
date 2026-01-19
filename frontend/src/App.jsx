@@ -8,6 +8,8 @@ import OtpVerifyPage from './page/OtpVerifyPage'
 import ForgotPasswordPage from './page/ForgotPasswordPage'
 import CourseDetailsPage from './page/CourseDetailsPage'
 import PaymentSuccess from './page/PaymentSuccess'
+import PaymentFailed from './page/PaymentFailed'
+import PaymentCancelled from './page/PaymentCancelled'
 import CoursesPage from './page/CoursesPage'
 import CourseCard from './component/sections/Course/CourseCard'
 import AdminLayout from './page/admin/AdminLayout'
@@ -22,9 +24,9 @@ import AddCoursePage from './page/admin/AddCoursePage'
 import AddProgram from './page/admin/AddProgram'
 import BookingPage from './page/BookingPage'
 import AdminCourseView from './page/admin/AdminCourseView'
-import AdminEditCourse from './page/admin/AdminEditCourse'
 import AddCourseInformation from './page/admin/AddCourseInformation'
 import EditCourseInformation from './page/admin/EditCourseInformation'
+import CheckoutPage from './page/CheckoutPage'
 import InstructorLayout from './page/instructor/InstructorLayout'
 import InstructorDashboard from './page/instructor/InstructorDashboard'
 import InstructorRequest from './page/instructor/InstructorRequest'
@@ -59,7 +61,10 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/courses" element={<CoursesPage />} />
       <Route path="/course/:courseId" element={<CourseDetailsPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/payment/success/:tran" element={<PaymentSuccess />} />
+      <Route path="/payment/failed/:tran" element={<PaymentFailed />} />
+      <Route path="/payment/cancelled/:tran" element={<PaymentCancelled />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="/instructors" element={<PublicInstructorsPage />} />
       <Route path="/learning-center" element={<LearningCenter />} />
@@ -77,7 +82,7 @@ function App() {
         <Route path="courses/add" element={<AddCoursePage />} />
         <Route path="programs/add" element={<AddProgram />} />
         <Route path="courses/:id" element={<AdminCourseView />} />
-        <Route path="courses/edit/:id" element={<AdminEditCourse />} />
+        <Route path="courses/edit/:id" element={<AddCoursePage />} />
         <Route path="modules/add" element={<AddCourseInformation />} />
         <Route path="modules/edit/:id" element={<EditCourseInformation />} />
         

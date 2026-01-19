@@ -249,13 +249,15 @@ const ManageCourseModules = () => {
       return
     }
 
-    // Validate lessons
-    for (let i = 0; i < modules.length; i++) {
-      const module = modules[i]
-      const hasEmptyLessons = module.lessons.some(lesson => !lesson.lesson_title)
-      if (hasEmptyLessons) {
-        alert(`Please fill in all lesson titles in Module ${i + 1}`)
-        return
+    // Validate lessons only for Online courses
+    if (course?.type === 'Online') {
+      for (let i = 0; i < modules.length; i++) {
+        const module = modules[i]
+        const hasEmptyLessons = module.lessons.some(lesson => !lesson.lesson_title)
+        if (hasEmptyLessons) {
+          alert(`Please fill in all lesson titles in Module ${i + 1}`)
+          return
+        }
       }
     }
 

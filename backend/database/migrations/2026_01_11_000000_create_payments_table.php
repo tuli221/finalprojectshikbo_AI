@@ -20,6 +20,10 @@ return new class extends Migration {
             $table->decimal('amount', 12, 2)->default(0);
             $table->string('currency', 10)->default('BDT');
             $table->string('status', 50)->default('initiated');
+            $table->string('student_name')->nullable();
+            $table->string('student_email')->nullable();
+            $table->string('student_phone')->nullable();
+            $table->text('student_address')->nullable();
             $table->text('raw_response')->nullable();
             $table->timestamps();
 

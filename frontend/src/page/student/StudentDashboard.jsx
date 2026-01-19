@@ -110,7 +110,10 @@ export default function StudentDashboard() {
                 <p className="text-black text-sm mb-4">{c.description}</p>
                 <div className="flex justify-between items-center">
                   <span className="text-indigo-600 font-bold">৳{Number(c.price || 0).toLocaleString()}</span>
-                  <button className="w-32 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 rounded-md text-lg transition">
+                  <button 
+                    onClick={() => navigate(`/course/${c.id}`)}
+                    className="w-32 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 rounded-md text-lg transition"
+                  >
                     Enroll Now
                   </button>
                 </div>

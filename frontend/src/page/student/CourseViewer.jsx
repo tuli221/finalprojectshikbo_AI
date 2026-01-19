@@ -15,6 +15,7 @@ const CourseViewer = () => {
   const [showQuiz, setShowQuiz] = useState(false)
   const [quizAnswers, setQuizAnswers] = useState({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
+  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 })
 
   useEffect(() => {
     if (courseId) {
@@ -146,6 +147,7 @@ const CourseViewer = () => {
       setShowQuiz(false)
       setQuizAnswers({})
       setQuizSubmitted(false)
+      setQuizScore({ correct: 0, total: 0 })
     }
   }
 
@@ -158,7 +160,7 @@ const CourseViewer = () => {
 
   const handleQuizSubmit = () => {
     setQuizSubmitted(true)
-    // Calculate score
+    // Calculate score - 1 mark per question
     const currentModule = modules[currentModuleIndex]
     const quiz = currentModule.quiz
     if (quiz && quiz.questions) {
@@ -168,8 +170,9 @@ const CourseViewer = () => {
           correct++
         }
       })
-      const score = Math.round((correct / quiz.questions.length) * 100)
-      alert(`Quiz completed! Your score: ${score}%`)
+      const total = quiz.questions.length
+      setQuizScore({ correct, total })
+      // Note: Score is now shown in the UI as "correct/total"
     }
   }
 
@@ -437,52 +440,130 @@ const CourseViewer = () => {
                 <>
                   {/* Quiz Section */}
                   <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      {currentModule?.quiz?.quiz_title || `Module ${currentModuleIndex + 1} Quiz`}
-                    </h2>
-                    <p className="text-gray-600 mb-6">
-                      Complete this quiz to finish the module
-                    </p>
-
-                    <div className="space-y-6">
-                      {currentModule?.quiz?.questions?.map((question, qIdx) => (
-                        <div key={qIdx} className="border rounded-lg p-4 bg-gray-50">
-                          <p className="font-semibold text-gray-900 mb-3">
-                            {qIdx + 1}. {question.question}
-                          </p>
-                          <div className="space-y-2">
-                            {question.options?.map((option, oIdx) => (
-                              <label
-                                key={oIdx}
-                                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition ${
-                                  quizAnswers[qIdx] === oIdx
-                                    ? 'border-green-500 bg-green-50'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                } ${
-                                  quizSubmitted && oIdx === question.correct_answer
-                                    ? 'border-green-600 bg-green-100'
-                                    : quizSubmitted && quizAnswers[qIdx] === oIdx && oIdx !== question.correct_answer
-                                    ? 'border-red-500 bg-red-50'
-                                    : ''
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`question-${qIdx}`}
-                                  checked={quizAnswers[qIdx] === oIdx}
-                                  onChange={() => handleQuizAnswer(qIdx, oIdx)}
-                                  disabled={quizSubmitted}
-                                  className="text-green-600"
-                                />
-                                <span>{option}</span>
-                                {quizSubmitted && oIdx === question.correct_answer && (
-                                  <span className="ml-auto text-green-600 font-semibold">✓ Correct</span>
-                                )}
-                              </label>
-                            ))}
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          {currentModule?.quiz?.quiz_title || `Module ${currentModuleIndex + 1} Quiz`}
+                        </h2>
+                        <p className="text-gray-600 mt-1">
+                          {!quizSubmitted 
+                            ? 'Each question is worth 1 mark. Answer all questions and submit.'
+                            : `Quiz Completed!`
+                          }
+                        </p>
+                      </div>
+                      {quizSubmitted && (
+                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-4 rounded-lg shadow-lg">
+                          <div className="text-center">
+                            <div className="text-sm font-medium mb-1">Your Score</div>
+                            <div className="text-3xl font-bold">
+                              {quizScore.correct}/{quizScore.total}
+                            </div>
                           </div>
                         </div>
-                      ))}
+                      )}
+                    </div>
+
+                    <div className="space-y-6">
+                      {currentModule?.quiz?.questions?.map((question, qIdx) => {
+                        const isCorrect = quizSubmitted && quizAnswers[qIdx] === question.correct_answer
+                        const isWrong = quizSubmitted && quizAnswers[qIdx] !== undefined && quizAnswers[qIdx] !== question.correct_answer
+                        
+                        return (
+                          <div key={qIdx} className={`border-2 rounded-lg p-5 ${
+                            quizSubmitted 
+                              ? isCorrect 
+                                ? 'bg-green-50 border-green-500' 
+                                : isWrong 
+                                ? 'bg-red-50 border-red-500' 
+                                : 'bg-gray-50 border-gray-300'
+                              : 'bg-gray-50 border-gray-200'
+                          }`}>
+                            <div className="flex items-start justify-between mb-3">
+                              <p className="font-semibold text-gray-900 flex-1">
+                                {qIdx + 1}. {question.question}
+                              </p>
+                              {quizSubmitted && (
+                                <div className="ml-4">
+                                  {isCorrect ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-600 text-white">
+                                      ✓ +1 Mark
+                                    </span>
+                                  ) : isWrong ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-600 text-white">
+                                      ✗ 0 Mark
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gray-400 text-white">
+                                      Not Answered
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {question.options?.map((option, oIdx) => {
+                                const isStudentAnswer = quizAnswers[qIdx] === oIdx
+                                const isCorrectAnswer = question.correct_answer === oIdx
+                                
+                                return (
+                                  <label
+                                    key={oIdx}
+                                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition ${
+                                      !quizSubmitted
+                                        ? isStudentAnswer
+                                          ? 'border-purple-500 bg-purple-50'
+                                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                                        : isCorrectAnswer
+                                        ? 'border-green-600 bg-green-100'
+                                        : isStudentAnswer && !isCorrectAnswer
+                                        ? 'border-red-500 bg-red-100'
+                                        : 'border-gray-200 bg-white'
+                                    }`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`question-${qIdx}`}
+                                      checked={quizAnswers[qIdx] === oIdx}
+                                      onChange={() => handleQuizAnswer(qIdx, oIdx)}
+                                      disabled={quizSubmitted}
+                                      className={`${
+                                        quizSubmitted 
+                                          ? isCorrectAnswer 
+                                            ? 'text-green-600' 
+                                            : 'text-red-600' 
+                                          : 'text-purple-600'
+                                      }`}
+                                    />
+                                    <span className="flex-1">{option}</span>
+                                    {quizSubmitted && (
+                                      <>
+                                        {isCorrectAnswer && (
+                                          <span className="ml-auto text-green-600 font-semibold flex items-center gap-1">
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                            Correct Answer
+                                          </span>
+                                        )}
+                                        {isStudentAnswer && !isCorrectAnswer && (
+                                          <span className="ml-auto text-red-600 font-semibold flex items-center gap-1">
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            </svg>
+                                            Your Answer
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
 

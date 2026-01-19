@@ -85,18 +85,7 @@ const RegisterPage = () => {
             Create Account
           </h2>
 
-          {/* Google Sign Up */}
-          <button className="w-full flex items-center justify-center border border-gray-300 bg-green-200 text-gray-700 py-2.5 px-4 rounded-lg shadow-sm hover:bg-green-100 transition duration-150">
-            <img src="https://img.icons8.com/color/16/000000/google-logo.png" alt="Google logo" className="mr-2" />
-            <span className="font-medium">Continue with Google</span>
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center my-6">
-            <div className="flex-grow border-t border-gray-300"></div>
-            <span className="flex-shrink mx-4 text-gray-500 text-sm">or</span>
-            <div className="flex-grow border-t border-gray-300"></div>
-          </div>
+      
 
           {/* Error Message */}
           {errors.general && (

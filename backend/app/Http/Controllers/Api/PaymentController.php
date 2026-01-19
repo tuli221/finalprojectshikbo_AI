@@ -21,7 +21,23 @@ class PaymentController extends Controller
 
         $data = $request->validate([
             'course_id' => 'required|integer',
+            'student_name' => 'nullable|string',
+            'student_email' => 'nullable|email',
+            'student_phone' => 'nullable|string',
+            'student_address' => 'nullable|string',
         ]);
+
+        // Update user profile with provided information
+        if (!empty($data['student_phone'])) {
+            $user->phone = $data['student_phone'];
+        }
+        if (!empty($data['student_name'])) {
+            $user->name = $data['student_name'];
+        }
+        if (!empty($data['student_address'])) {
+            $user->address = $data['student_address'];
+        }
+        $user->save();
 
         $course = Course::find($data['course_id']);
         if (! $course) {
@@ -56,6 +72,10 @@ class PaymentController extends Controller
             'amount' => $amount,
             'currency' => 'BDT',
             'status' => 'initiated',
+            'student_name' => $data['student_name'] ?? $user->name,
+            'student_email' => $data['student_email'] ?? $user->email,
+            'student_phone' => $data['student_phone'] ?? $user->phone,
+            'student_address' => $data['student_address'] ?? null,
         ]);
 
         // If SSLCOMMERZ credentials are provided in env, attempt real gateway initiation
@@ -142,7 +162,97 @@ class PaymentController extends Controller
     public function gatewayRedirect($tran)
     {
         // In production this would be the external gateway; here we simulate
-        $html = "<html><head><title>Simulated SSLCommerz</title></head><body style='background:#111;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;'><div style='text-align:center;'><h1>Simulated SSLCommerz Gateway</h1><p>Transaction: {$tran}</p><form method='POST' action='/api/sslcommerz/callback/{$tran}'><button style='padding:12px 20px;background:#16a34a;border:none;border-radius:6px;color:#000;font-weight:700;'>Simulate Successful Payment</button></form></div></body></html>";
+        $html = "
+        <html>
+        <head>
+            <title>Simulated SSLCommerz</title>
+            <style>
+                body {
+                    background: #111;
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    font-family: system-ui, -apple-system, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                }
+                .container {
+                    text-align: center;
+                    max-width: 500px;
+                }
+                h1 {
+                    font-size: 24px;
+                    margin-bottom: 10px;
+                }
+                p {
+                    color: #999;
+                    margin-bottom: 30px;
+                }
+                .buttons {
+                    display: flex;
+                    gap: 10px;
+                    flex-direction: column;
+                }
+                button {
+                    padding: 14px 24px;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    font-size: 16px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .success-btn {
+                    background: #16a34a;
+                    color: #000;
+                }
+                .success-btn:hover {
+                    background: #15803d;
+                }
+                .fail-btn {
+                    background: #dc2626;
+                    color: #fff;
+                }
+                .fail-btn:hover {
+                    background: #b91c1c;
+                }
+                .cancel-btn {
+                    background: #6b7280;
+                    color: #fff;
+                }
+                .cancel-btn:hover {
+                    background: #4b5563;
+                }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <h1>🔐 Simulated SSLCommerz Gateway</h1>
+                <p>Transaction: <strong>{$tran}</strong></p>
+                <p style='font-size: 14px; color: #666;'>This is a simulated payment gateway for testing purposes.</p>
+                <div class='buttons'>
+                    <form method='POST' action='/api/sslcommerz/callback/{$tran}'>
+                        <input type='hidden' name='status' value='VALID'>
+                        <input type='hidden' name='tran_id' value='{$tran}'>
+                        <input type='hidden' name='val_id' value='sim_".uniqid()."'>
+                        <button type='submit' class='success-btn'>✓ Simulate Successful Payment</button>
+                    </form>
+                    <form method='POST' action='/api/sslcommerz/callback/{$tran}'>
+                        <input type='hidden' name='status' value='FAILED'>
+                        <input type='hidden' name='tran_id' value='{$tran}'>
+                        <button type='submit' class='fail-btn'>✗ Simulate Failed Payment</button>
+                    </form>
+                    <form method='POST' action='/api/sslcommerz/callback/{$tran}'>
+                        <input type='hidden' name='status' value='CANCELLED'>
+                        <input type='hidden' name='tran_id' value='{$tran}'>
+                        <button type='submit' class='cancel-btn'>⊗ Simulate Cancelled Payment</button>
+                    </form>
+                </div>
+            </div>
+        </body>
+        </html>";
         return response($html, 200)->header('Content-Type', 'text/html');
     }
 
@@ -153,52 +263,102 @@ class PaymentController extends Controller
         if (! $p) {
             return response()->json(['message' => 'Payment not found'], 404);
         }
-        $p->status = 'completed';
+
+        // Get the status from SSLCommerz callback parameters
+        // SSLCommerz sends different parameters based on success/fail/cancel
+        $status = $request->input('status'); // Can be: VALID, FAILED, CANCELLED
+        $valId = $request->input('val_id');
+        $cardType = $request->input('card_type');
+        $storeAmount = $request->input('store_amount');
+        $bankTxnId = $request->input('bank_tran_id');
+        
+        // Store raw response for debugging
         $p->raw_response = json_encode($request->all());
+        
+        // Determine payment status based on callback data
+        if ($status === 'VALID' || $status === 'VALIDATED') {
+            // Payment was successful
+            $p->status = 'completed';
+        } elseif ($status === 'FAILED') {
+            // Payment failed
+            $p->status = 'failed';
+            $p->save();
+            
+            // Redirect to failure page
+            $frontendUrl = env('FRONTEND_URL') ?: config('app.url') ?: $request->getSchemeAndHttpHost();
+            $frontendFail = rtrim($frontendUrl, '/') . '/payment/failed/' . $tran;
+            
+            if (! $request->expectsJson()) {
+                return redirect($frontendFail);
+            }
+            return response()->json(['message' => 'Payment failed', 'payment' => $p]);
+        } elseif ($status === 'CANCELLED') {
+            // Payment was cancelled by user
+            $p->status = 'cancelled';
+            $p->save();
+            
+            // Redirect to cancel page
+            $frontendUrl = env('FRONTEND_URL') ?: config('app.url') ?: $request->getSchemeAndHttpHost();
+            $frontendCancel = rtrim($frontendUrl, '/') . '/payment/cancelled/' . $tran;
+            
+            if (! $request->expectsJson()) {
+                return redirect($frontendCancel);
+            }
+            return response()->json(['message' => 'Payment cancelled', 'payment' => $p]);
+        } else {
+            // Unknown status - mark as pending for manual review
+            $p->status = 'pending';
+            $p->save();
+            
+            return response()->json(['message' => 'Payment status unknown', 'payment' => $p], 400);
+        }
+        
         $p->save();
 
-        // Enroll the user into the course if possible; create an Enrollment record
-        try {
-            $user = User::find($p->user_id);
-            if ($user) {
-                // create a dedicated enrollment record
-                // Create enrollment if not exists (avoid duplicates)
-                try {
-                    $enrollment = Enrollment::firstOrCreate(
-                        ['user_id' => $p->user_id, 'course_id' => $p->course_id],
-                        ['payment_id' => $p->id, 'enrolled_at' => now(), 'status' => 'active']
-                    );
+        // ONLY enroll the user if payment was successful (status = completed)
+        if ($p->status === 'completed') {
+            try {
+                $user = User::find($p->user_id);
+                if ($user) {
+                    // create a dedicated enrollment record
+                    // Create enrollment if not exists (avoid duplicates)
+                    try {
+                        $enrollment = Enrollment::firstOrCreate(
+                            ['user_id' => $p->user_id, 'course_id' => $p->course_id],
+                            ['payment_id' => $p->id, 'enrolled_at' => now(), 'status' => 'active']
+                        );
 
-                    // If the enrollment was just created (fresh timestamp equals now within a small window), treat as new
-                    $wasRecentlyCreated = isset($enrollment->wasRecentlyCreated) ? $enrollment->wasRecentlyCreated : false;
+                        // If the enrollment was just created (fresh timestamp equals now within a small window), treat as new
+                        $wasRecentlyCreated = isset($enrollment->wasRecentlyCreated) ? $enrollment->wasRecentlyCreated : false;
 
-                    // Also keep the legacy single-course assignment for compatibility
-                    if (empty($user->course_id) || $user->course_id != $p->course_id) {
-                        $user->course_id = $p->course_id;
-                        $user->enrollment_date = now();
-                        $user->save();
-                    }
-
-                    // increment enrolled_count on course only when enrollment was newly created
-                    if ($wasRecentlyCreated) {
-                        try {
-                            $course = Course::find($p->course_id);
-                            if ($course) {
-                                if (isset($course->enrolled_count)) {
-                                    $course->enrolled_count = ($course->enrolled_count ?? 0) + 1;
-                                    $course->save();
-                                }
-                            }
-                        } catch (\Exception $e) {
-                            logger()->warning('Failed to increment course enrolled_count: '.$e->getMessage());
+                        // Also keep the legacy single-course assignment for compatibility
+                        if (empty($user->course_id) || $user->course_id != $p->course_id) {
+                            $user->course_id = $p->course_id;
+                            $user->enrollment_date = now();
+                            $user->save();
                         }
+
+                        // increment enrolled_count on course only when enrollment was newly created
+                        if ($wasRecentlyCreated) {
+                            try {
+                                $course = Course::find($p->course_id);
+                                if ($course) {
+                                    if (isset($course->enrolled_count)) {
+                                        $course->enrolled_count = ($course->enrolled_count ?? 0) + 1;
+                                        $course->save();
+                                    }
+                                }
+                            } catch (\Exception $e) {
+                                logger()->warning('Failed to increment course enrolled_count: '.$e->getMessage());
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        logger()->warning('Failed to create or update enrollment record: '.$e->getMessage());
                     }
-                } catch (\Exception $e) {
-                    logger()->warning('Failed to create or update enrollment record: '.$e->getMessage());
                 }
+            } catch (\Exception $e) {
+                logger()->error('Failed to enroll user after payment: '.$e->getMessage());
             }
-        } catch (\Exception $e) {
-            logger()->error('Failed to enroll user after payment: '.$e->getMessage());
         }
 
         // If this callback was initiated by a browser POST, redirect to frontend success page

@@ -120,32 +120,8 @@ const CourseDetailsPage = () => {
       return
     }
 
-    try {
-      setEnrolling(true)
-      const res = await api.post('/sslcommerz/initiate', { course_id: course.id })
-      const redirectUrl = res?.data?.redirect_url || res?.data?.url || res?.data?.GatewayPageURL || res?.data?.data?.redirect_url
-
-      if (redirectUrl) {
-        window.location.href = redirectUrl
-        return
-      }
-
-      if (typeof res?.data === 'string' && res.data.includes('<form')) {
-        const w = window.open('', '_blank')
-        if (w) {
-          w.document.write(res.data)
-          w.document.close()
-        }
-        return
-      }
-
-      alert('Unable to initiate payment. Please try again later.')
-    } catch (e) {
-      console.error('Payment initiation failed', e)
-      alert('Payment initiation failed. Please try again.')
-    } finally {
-      setEnrolling(false)
-    }
+    // Navigate to checkout page with course ID
+    navigate('/checkout', { state: { courseId: course.id } })
   }
 
   if (loading) {

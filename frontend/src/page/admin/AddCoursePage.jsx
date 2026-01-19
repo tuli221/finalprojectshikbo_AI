@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import api from '../../config/api'
 
 const AddCoursePage = () => {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const isEditMode = Boolean(id)
   const [instructors, setInstructors] = useState([])
   const [instructorUsers, setInstructorUsers] = useState([])
+  const [loading, setLoading] = useState(isEditMode)
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -21,7 +24,6 @@ const AddCoursePage = () => {
     language: 'English',
     status: 'Published',
     video_url: '',
-    video_url: '',
     certificate: true,
   })
   const [thumbnail, setThumbnail] = useState(null)
@@ -33,10 +35,19 @@ const AddCoursePage = () => {
     let mounted = true
     const fetch = async () => {
       try {
-        const [instRes, usersRes] = await Promise.all([
+        const promises = [
           api.get('/instructors'),
           api.get('/admin/instructors/users')
-        ])
+        ]
+        
+        // If edit mode, also fetch the course data
+        if (isEditMode) {
+          promises.push(api.get(`/courses/${id}`))
+        }
+        
+        const results = await Promise.all(promises)
+        const [instRes, usersRes, courseRes] = results
+        
         if (!mounted) return
 
         // approved instructor profiles (public)
@@ -54,13 +65,41 @@ const AddCoursePage = () => {
         adminUsers.forEach(u => push({ id: u.id, name: u.name || '', email: u.email || '' }))
         approved.forEach(p => push({ id: p.user_id || p.id, name: p.name || '', email: p.email || '' }))
         setInstructorUsers(Array.from(map.values()))
+        
+        // If in edit mode, populate form with course data
+        if (isEditMode && courseRes) {
+          const c = courseRes.data || {}
+          setFormData({
+            title: c.title || '',
+            category: c.category || '',
+            price: c.price ?? '',
+            discount_price: c.discount_price ?? '',
+            duration: c.duration ?? '',
+            lessons: c.lessons ?? '',
+            description: c.description || '',
+            instructor_id: c.instructor_id ?? '',
+            instructor_profile_id: c.instructor_profile_id ?? c.instructor_profile?.id ?? '',
+            level: c.level || 'Beginner',
+            type: c.type || 'Offline',
+            language: c.language || 'English',
+            status: c.status || 'Draft',
+            video_url: c.video_url || '',
+            certificate: c.certificate ?? true,
+          })
+        }
+        
+        setLoading(false)
       } catch (err) {
         console.error(err)
+        if (isEditMode) {
+          alert('Failed to load course data')
+        }
+        setLoading(false)
       }
     }
     fetch()
     return () => { mounted = false }
-  }, [])
+  }, [id, isEditMode])
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -89,6 +128,12 @@ const AddCoursePage = () => {
     }
     
     const data = new FormData()
+    
+    // If editing, add method spoofing for Laravel
+    if (isEditMode) {
+      data.append('_method', 'PUT')
+    }
+    
     data.append('title', formData.title)
     data.append('category', formData.category)
     data.append('price', formData.price)
@@ -103,7 +148,6 @@ const AddCoursePage = () => {
     
     if (formData.discount_price) data.append('discount_price', formData.discount_price)
     if (formData.instructor_profile_id) data.append('instructor_profile_id', formData.instructor_profile_id)
-    // `requirements`, `what_you_learn`, and `course_modules` removed (dropped from DB)
     if (formData.video_url) data.append('video_url', formData.video_url)
     
     if (thumbnail) {
@@ -116,8 +160,14 @@ const AddCoursePage = () => {
     console.log('Submitting form with instructor_id:', formData.instructor_id)
 
     try {
-      await api.post('/admin/courses', data)
-      alert('Course created successfully!')
+      if (isEditMode) {
+        // Use POST with _method=PUT for Laravel to properly parse FormData
+        await api.post(`/admin/courses/${id}`, data)
+        alert('Course updated successfully!')
+      } else {
+        await api.post('/admin/courses', data)
+        alert('Course created successfully!')
+      }
       navigate('/admin/courses')
     } catch (error) {
       console.error('Full error:', error.response?.data)
@@ -126,7 +176,7 @@ const AddCoursePage = () => {
         const errorMessages = Object.entries(errors).map(([field, msgs]) => `${field}: ${msgs.join(', ')}`).join('\n')
         alert('Validation errors:\n' + errorMessages)
       } else {
-        alert(error.response?.data?.message || 'Failed to create course')
+        alert(error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} course`)
       }
     }
   }
@@ -135,12 +185,20 @@ const AddCoursePage = () => {
     navigate('/admin/courses')
   }
 
+  if (loading) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow">
+        <div className="text-center py-8 text-gray-500">Loading course data...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white p-8 rounded-2xl shadow relative">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h3 className="text-2xl font-semibold mb-2">Add New Course</h3>
-          <p className="text-gray-600">Fill in the details to create a new course</p>
+          <h3 className="text-2xl font-semibold mb-2">{isEditMode ? 'Edit Course' : 'Add New Course'}</h3>
+          <p className="text-gray-600">{isEditMode ? 'Update the course details and save changes' : 'Fill in the details to create a new course'}</p>
         </div>
         
       </div>
@@ -450,7 +508,7 @@ const AddCoursePage = () => {
             type="submit"
             className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
           >
-            Create Course
+            {isEditMode ? 'Update Course' : 'Create Course'}
           </button>
         </div>
       </form>
