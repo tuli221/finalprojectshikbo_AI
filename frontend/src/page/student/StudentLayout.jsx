@@ -13,7 +13,7 @@ const links = [
 
 export default function StudentLayout() {
 	const navigate = useNavigate()
-	const { logout } = useAuth()
+	const { logout, user } = useAuth()
 	return (
 		<div className="min-h-screen flex bg-gray-50">
 			{/* left sidebar */}
@@ -46,11 +46,11 @@ export default function StudentLayout() {
 			{/* main content (space for sidebar) */}
 			<div className="flex-1 ml-64">
 								<TopBar
-									title="Welcome back, Student!"
+									title={`Welcome back, ${user?.name || 'Student'}!`}
 									showSidebarToggle={false}
 									profile={{
-										name: 'Student',
-										avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=SA',
+										name: user?.name || 'Student',
+										avatar: `https://api.dicebear.com/6.x/initials/svg?seed=${user?.name || 'Student'}`,
 										actions: [
 											{ label: 'My Profile', onClick: () => navigate('/student/settings') },
 											{ label: 'Logout', onClick: async () => { await logout(); navigate('/') } }

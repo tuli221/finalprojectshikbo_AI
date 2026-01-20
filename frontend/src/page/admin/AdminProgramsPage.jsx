@@ -103,19 +103,12 @@ const AdminProgramsPage = () => {
                   <th className="p-3">Phone</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Booked At</th>
+                  <th className="p-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {bookings.map(b => (
-                  <tr key={b.id} className="hover:bg-gray-50">
-                    <td className="p-3">#{b.id}</td>
-                    <td className="p-3 font-medium">{b.program ? b.program.title : (b.program_id || '—')}</td>
-                    <td className="p-3">{b.slot_label || b.slot_id || '—'}</td>
-                    <td className="p-3">{b.name}</td>
-                    <td className="p-3">{b.phone}</td>
-                    <td className="p-3">{b.email}</td>
-                    <td className="p-3">{new Date(b.created_at).toLocaleString()}</td>
-                  </tr>
+                  <BookingRow key={b.id} booking={b} onDeleted={(id) => setBookings(prev => prev.filter(x => x.id !== id))} />
                 ))}
               </tbody>
             </table>
@@ -129,6 +122,26 @@ const AdminProgramsPage = () => {
 function AdminProgramRow({ program, onDeleted }) {
   const navigate = useNavigate()
   const [deleting, setDeleting] = useState(false)
+  const [bookings, setBookings] = useState([])
+
+  useEffect(() => {
+    // Load bookings to show count
+    const loadBookings = async () => {
+      try {
+        const res = await api.get('/bookings').catch(() => null)
+        if (res && res.data && Array.isArray(res.data)) {
+          setBookings(res.data)
+        } else {
+          const stored = JSON.parse(localStorage.getItem('bookings') || '[]')
+          setBookings(stored)
+        }
+      } catch (e) {
+        const stored = JSON.parse(localStorage.getItem('bookings') || '[]')
+        setBookings(stored)
+      }
+    }
+    loadBookings()
+  }, [])
 
   const handleEdit = () => navigate(`/admin/programs/edit/${program.id}`)
 
@@ -160,6 +173,9 @@ function AdminProgramRow({ program, onDeleted }) {
       <td className="p-3 font-medium">
         <div>
           <div className="font-semibold">{program.title}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Bookings: {bookings.filter(b => String(b.program_id) === String(program.id)).length} / 25
+          </div>
         </div>
       </td>
       <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs font-semibold">{program.badge}</span></td>
@@ -174,6 +190,54 @@ function AdminProgramRow({ program, onDeleted }) {
             <i className="fa-solid fa-trash-can text-xs" />
           </button>
         </div>
+      </td>
+    </tr>
+  )
+}
+
+function BookingRow({ booking, onDeleted }) {
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete booking for ${booking.name}?`)) return
+    try {
+      setDeleting(true)
+      await api.delete(`/admin/bookings/${booking.id}`)
+      onDeleted(booking.id)
+    } catch (err) {
+      // fallback to localStorage removal
+      try {
+        const stored = JSON.parse(localStorage.getItem('bookings') || '[]')
+        const filtered = stored.filter(x => String(x.id) !== String(booking.id))
+        localStorage.setItem('bookings', JSON.stringify(filtered))
+        onDeleted(booking.id)
+      } catch (e) {
+        console.error('Failed to delete booking', e)
+        alert('Failed to delete booking')
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <tr className="hover:bg-gray-50">
+      <td className="p-3">#{booking.id}</td>
+      <td className="p-3 font-medium">{booking.program ? booking.program.title : (booking.program_id || '—')}</td>
+      <td className="p-3">{booking.slot_label || booking.slot_id || '—'}</td>
+      <td className="p-3">{booking.name}</td>
+      <td className="p-3">{booking.phone}</td>
+      <td className="p-3">{booking.email}</td>
+      <td className="p-3">{new Date(booking.created_at).toLocaleString()}</td>
+      <td className="p-3">
+        <button 
+          title="Delete" 
+          onClick={handleDelete} 
+          disabled={deleting} 
+          className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center"
+        >
+          <i className="fa-solid fa-trash-can text-xs" />
+        </button>
       </td>
     </tr>
   )

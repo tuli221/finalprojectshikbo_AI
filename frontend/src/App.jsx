@@ -15,6 +15,7 @@ import CourseCard from './component/sections/Course/CourseCard'
 import AdminLayout from './page/admin/AdminLayout'
 import DashboardPage from './page/admin/DashboardPage'
 import UsersPage from './page/admin/StudentPage'
+import StudentViewPage from './page/admin/StudentViewPage'
 import AdminInstructorsPage from './page/admin/InstructorsPage'
 import AdminCoursesPage from './page/admin/AdminCoursesPage'
 import AdminProgramsPage from './page/admin/AdminProgramsPage'
@@ -75,6 +76,7 @@ function App() {
         <Route index element={<DashboardPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="students/:id" element={<StudentViewPage />} />
         <Route path="instructors" element={<AdminInstructorsPage />} />
         <Route path="courses" element={<AdminCoursesPage />} />
         <Route path="programs" element={<AdminProgramsPage />} />

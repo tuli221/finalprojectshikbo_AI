@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../config/api'
+import { getProgress, saveProgress as saveProgressToServer, calculateTotalLessons } from '../../utils/courseProgress'
 
 const CourseViewer = () => {
   const { courseId } = useParams()
@@ -11,7 +12,7 @@ const CourseViewer = () => {
   const [modules, setModules] = useState([])
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0)
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
-  const [completedLessons, setCompletedLessons] = useState(new Set())
+  const [completedLessons, setCompletedLessons] = useState([])
   const [showQuiz, setShowQuiz] = useState(false)
   const [quizAnswers, setQuizAnswers] = useState({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
@@ -20,7 +21,6 @@ const CourseViewer = () => {
   useEffect(() => {
     if (courseId) {
       fetchCourseData()
-      loadProgress()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId])
@@ -52,12 +52,13 @@ const CourseViewer = () => {
 
         console.log('Fetched modules:', parsedModules)
 
-        console.log('Fetched modules:', parsedModules)
-
         if (Array.isArray(parsedModules)) {
           setModules(parsedModules)
         }
       }
+
+      // Load progress after course data is fetched
+      await loadProgress()
     } catch (error) {
       console.error('Error fetching course data:', error)
       alert('Failed to load course')
@@ -66,33 +67,35 @@ const CourseViewer = () => {
     }
   }
 
-  const loadProgress = () => {
-    const saved = localStorage.getItem(`course_progress_${courseId}`)
-    if (saved) {
-      try {
-        const data = JSON.parse(saved)
-        setCompletedLessons(new Set(data.completed || []))
-        setCurrentModuleIndex(data.currentModule || 0)
-        setCurrentLessonIndex(data.currentLesson || 0)
-      } catch (e) {
-        console.error('Error loading progress:', e)
+  const loadProgress = async () => {
+    try {
+      const response = await api.get(`/courses/${courseId}/progress`)
+      const progress = {
+        completedLessons: response.data.completed_lessons || [],
+        progressPercentage: response.data.progress_percentage || 0
       }
+      setCompletedLessons(progress.completedLessons || [])
+    } catch (e) {
+      console.error('Error loading progress:', e)
+      setCompletedLessons([])
     }
   }
 
-  const saveProgress = (moduleIdx, lessonIdx, completed) => {
-    const progressData = {
-      currentModule: moduleIdx,
-      currentLesson: lessonIdx,
-      completed: Array.from(completed)
+  const saveProgress = async (moduleIdx, lessonIdx, completed) => {
+    try {
+      const totalLessons = calculateTotalLessons(modules)
+      await saveProgressToServer(courseId, completed, totalLessons)
+    } catch (e) {
+      console.error('Error saving progress:', e)
     }
-    localStorage.setItem(`course_progress_${courseId}`, JSON.stringify(progressData))
   }
 
   const markLessonComplete = () => {
     const lessonKey = `${currentModuleIndex}-${currentLessonIndex}`
-    const newCompleted = new Set(completedLessons)
-    newCompleted.add(lessonKey)
+    const newCompleted = [...completedLessons]
+    if (!newCompleted.includes(lessonKey)) {
+      newCompleted.push(lessonKey)
+    }
     setCompletedLessons(newCompleted)
     saveProgress(currentModuleIndex, currentLessonIndex, newCompleted)
   }
@@ -110,7 +113,6 @@ const CourseViewer = () => {
     if (currentLessonIndex < lessons.length - 1) {
       const newLessonIdx = currentLessonIndex + 1
       setCurrentLessonIndex(newLessonIdx)
-      saveProgress(currentModuleIndex, newLessonIdx, completedLessons)
       setShowQuiz(false)
     } else {
       // Last lesson in module - show quiz
@@ -122,7 +124,6 @@ const CourseViewer = () => {
     if (currentLessonIndex > 0) {
       const newLessonIdx = currentLessonIndex - 1
       setCurrentLessonIndex(newLessonIdx)
-      saveProgress(currentModuleIndex, newLessonIdx, completedLessons)
       setShowQuiz(false)
     } else if (currentModuleIndex > 0) {
       // Go to previous module's last lesson
@@ -133,7 +134,6 @@ const CourseViewer = () => {
       
       setCurrentModuleIndex(prevModuleIdx)
       setCurrentLessonIndex(lastLessonIdx)
-      saveProgress(prevModuleIdx, lastLessonIdx, completedLessons)
       setShowQuiz(false)
     }
   }
@@ -143,7 +143,6 @@ const CourseViewer = () => {
       const newModuleIdx = currentModuleIndex + 1
       setCurrentModuleIndex(newModuleIdx)
       setCurrentLessonIndex(0)
-      saveProgress(newModuleIdx, 0, completedLessons)
       setShowQuiz(false)
       setQuizAnswers({})
       setQuizSubmitted(false)
@@ -183,7 +182,7 @@ const CourseViewer = () => {
   }
 
   const getCompletedCount = () => {
-    return completedLessons.size
+    return completedLessons.length
   }
 
   const getProgress = () => {
@@ -314,7 +313,7 @@ const CourseViewer = () => {
                     <div className="ml-3 space-y-1">
                       {module.lessons?.map((lesson, lessonIdx) => {
                         const lessonKey = `${moduleIdx}-${lessonIdx}`
-                        const isCompleted = completedLessons.has(lessonKey)
+                        const isCompleted = completedLessons.includes(lessonKey)
                         const isCurrent = moduleIdx === currentModuleIndex && lessonIdx === currentLessonIndex
 
                         return (
@@ -324,7 +323,6 @@ const CourseViewer = () => {
                               setCurrentModuleIndex(moduleIdx)
                               setCurrentLessonIndex(lessonIdx)
                               setShowQuiz(false)
-                              saveProgress(moduleIdx, lessonIdx, completedLessons)
                             }}
                             className={`text-xs p-2 rounded cursor-pointer flex items-center gap-2 ${
                               isCurrent ? 'bg-green-100 text-green-800 font-medium' : 'hover:bg-gray-100'

@@ -44,7 +44,7 @@ class StudentController extends Controller
         $enrolledIds = array_values(array_unique(array_filter($enrolledIds)));
         $courseEnrolled = count($enrolledIds);
         $lessonsCompleted = 0; // placeholder if you add progress tracking
-        $xpEarned = 0;
+        $xpEarned = $user->xp ?? 0; // Get XP from user
 
         // recommended courses (published), exclude any courses the user is already enrolled in
         $recommended = Course::where('status', 'Published')

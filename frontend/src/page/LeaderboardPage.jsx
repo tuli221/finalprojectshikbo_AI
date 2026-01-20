@@ -1,83 +1,43 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Navbar from '../component/sections/Header/Navbar'
 import Footer from '../component/sections/Footer/Footer'
 import ChatButton from '../component/ui/ChatBot'
+import api from '../config/api'
 
 const LeaderboardPage = () => {
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [leaderboardData, setLeaderboardData] = useState([])
+  const [loading, setLoading] = useState(true)
   
-  const leaderboardData = [
-    {
-      rank: 1,
-      name: 'Sabikun Nahar',
-      xp: 2450,
-      courses: 8,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=SN'
-    },
-    {
-      rank: 2,
-      name: 'Ahmed Rahman',
-      xp: 2340,
-      courses: 7,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=AR'
-    },
-    {
-      rank: 3,
-      name: 'Fatima Khan',
-      xp: 2120,
-      courses: 6,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=FK'
-    },
-    {
-      rank: 4,
-      name: 'Rashid Ali',
-      xp: 1180,
-      courses: 4,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=RA'
-    },
-    {
-      rank: 5,
-      name: 'Nusrat Jahan',
-      xp: 980,
-      courses: 4,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=NJ'
-    },
-    {
-      rank: 6,
-      name: 'Karim Hossain',
-      xp: 850,
-      courses: 3,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=KH'
-    },
-    {
-      rank: 7,
-      name: 'Zara Islam',
-      xp: 720,
-      courses: 3,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=ZI'
-    },
-    {
-      rank: 8,
-      name: 'Maria Ahmed',
-      xp: 650,
-      courses: 2,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=MA'
-    },
-    {
-      rank: 9,
-      name: 'Imran Khalid',
-      xp: 580,
-      courses: 2,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=IK'
-    },
-    {
-      rank: 10,
-      name: 'Ayesha Begum',
-      xp: 520,
-      courses: 2,
-      avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=AB'
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const response = await api.get('/leaderboard')
+        setLeaderboardData(response.data)
+      } catch (err) {
+        console.error('Failed to fetch leaderboard:', err)
+        setLeaderboardData([])
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+    fetchLeaderboard()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar />
+        <main className="flex-1 container mx-auto px-4 py-12 max-w-7xl">
+          <div className="text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            <p className="mt-4 text-gray-600">Loading leaderboard...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -94,6 +54,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Top 3 Podium */}
+        {leaderboardData.length >= 3 && (
         <div className="grid grid-cols-3 gap-4 md:gap-8 mb-12 max-w-3xl mx-auto">
           {/* 2nd Place */}
           <div className="flex flex-col items-center pt-8 md:pt-12">
@@ -147,6 +108,13 @@ const LeaderboardPage = () => {
             <p className="text-gray-500 text-xs md:text-sm">{leaderboardData[2].courses} courses</p>
           </div>
         </div>
+        )}
+
+        {leaderboardData.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No students with XP yet. Start earning XP to appear on the leaderboard!</p>
+          </div>
+        )}
 
         {/* Full Leaderboard Table */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">

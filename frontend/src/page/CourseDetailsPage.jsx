@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { courseDetailsData } from '../data/courseDetailsData'
 import Navbar from '../component/sections/Header/Navbar'
 import Footer from '../component/sections/Footer/Footer'
 import api from '../config/api'
+import getCourseImage from '../utils/getCourseImage'
 
 const CourseDetailsPage = () => {
   const { courseId } = useParams()
   const navigate = useNavigate()
-  const [course, setCourse] = useState(courseDetailsData[courseId] ?? null)
+  const [course, setCourse] = useState(null)
   const [expandedModules, setExpandedModules] = useState({})
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
 
   useEffect(() => {
-    // If static data exists, still fetch course from API only when missing; always fetch course info separately
     let mounted = true
     const fetchCourse = async () => {
       try {
         setLoading(true)
-        if (!course) {
-          const res = await api.get(`/courses/${courseId}`)
-          if (!mounted) return
-          setCourse(res.data)
-        }
+        const res = await api.get(`/courses/${courseId}`)
+        if (!mounted) return
+        setCourse(res.data)
       } catch (e) {
+        console.error('Error fetching course:', e)
         if (!mounted) return
         setCourse(null)
       } finally {
@@ -80,11 +78,14 @@ const CourseDetailsPage = () => {
         // Merge into existing course state (preserve other fields)
         setCourse(prev => prev ? ({ ...prev, ...merged }) : ({ ...(merged || {}), id: courseId }))
       } catch (e) {
+        console.log('Course information not found, using course data only')
         // ignore if no course information exists
       }
     }
 
-    fetchCourseInfo()
+    if (courseId) {
+      fetchCourseInfo()
+    }
     return () => { mounted = false }
   }, [courseId])
 
@@ -126,26 +127,47 @@ const CourseDetailsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">Loading...</div>
-      </div>
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+            <p className="text-gray-300">Loading course details...</p>
+          </div>
+        </div>
+      </>
     )
   }
 
   // Price display: use discount_price as main price when provided
-  const price = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
+  const price = (course?.discount_price !== undefined && course?.discount_price !== null && course?.discount_price !== '')
     ? course.discount_price
-    : (course.price ?? '')
-  const originalPrice = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
-    ? (course.price ?? '')
+    : (course?.price ?? '')
+  const originalPrice = (course?.discount_price !== undefined && course?.discount_price !== null && course?.discount_price !== '')
+    ? (course?.price ?? '')
     : ''
 
-  // Normalize image source: prefer `imageSrc`, fall back to `thumbnail` from API
-  let imageSrc = course?.imageSrc || ''
-  if (!imageSrc && course?.thumbnail) {
-    const base = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8000'
-    imageSrc = course.thumbnail.startsWith('http') ? course.thumbnail : `${base}/storage/${course.thumbnail}`
-  }
+  // Normalize image source using shared helper (prefer admin thumbnail)
+  const imageSrc = getCourseImage(course)
+
+  // Safely get instructor data
+  const instructor = course?.instructor_profile || course?.instructor || {}
+  const instructorName = instructor?.name || course?.instructor?.name || 'TBA'
+  const instructorTitle = instructor?.title || instructor?.role || ''
+  const instructorInitials = instructorName.split(' ').map(n => n[0]).join('').toUpperCase() || 'I'
+  
+  // Get enrolled count and rating
+  const enrolledCount = course?.enrolled_count || 0
+  const rating = course?.rating || 0
+  
+  // Course duration
+  const duration = course?.duration ? `${course.duration} months` : 'TBA'
+  
+  // Full title and description
+  const fullTitle = course?.title || 'Course Title'
+  const description = course?.description || ''
+  const level = course?.level || 'Beginner'
+  const category = course?.category || 'General'
 
   return (
     <>
@@ -170,31 +192,31 @@ const CourseDetailsPage = () => {
             <div>
               <div className="flex gap-4 items-center mb-4">
                 <span className="bg-green-700 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                  {course.level}
+                  {level}
                 </span>
-                <span className="text-gray-300">{course.category}</span>
+                <span className="text-gray-300">{category}</span>
               </div>
 
-              <h1 className="text-4xl font-bold mb-3">{course.fullTitle}</h1>
+              <h1 className="text-4xl font-bold mb-3">{fullTitle}</h1>
 
               <p className="text-gray-300 text-lg mb-6">
-                {course.description}
+                {description}
               </p>
 
               <div className="flex items-center gap-6 text-gray-400 text-sm">
                 <div className="flex items-center gap-2">
                   <i className="fa-regular fa-clock text-gray-300"></i>
-                  {course.duration}
+                  {duration}
                 </div>
 
                 <div className="flex items-center gap-2">
                   <i className="fa-solid fa-users text-gray-300"></i>
-                  {course.students} students
+                  {enrolledCount} students
                 </div>
 
                 <div className="flex items-center gap-1">
                   <i className="fa-solid fa-star text-yellow-400"></i>
-                  {course.rating}
+                  {rating}
                 </div>
               </div>
             </div>
@@ -203,7 +225,7 @@ const CourseDetailsPage = () => {
             <div className="bg-gray-800 rounded-3xl p-3 shadow-xl w-full md:max-w-[700px] md:-mt-16">
               <img 
                 src={imageSrc || '/assets/React.jpg'}
-                alt={course.title}
+                alt={fullTitle}
                 className="rounded-xl mb-6 w-full h-48 sm:h-56 object-cover shadow-lg"
               />
 
@@ -234,58 +256,62 @@ const CourseDetailsPage = () => {
             <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-black/40">
               <h2 className="text-3xl font-bold mb-4">About This Course</h2>
               <p className="text-gray-300 leading-relaxed">
-                {course.about}
+                {course?.about || description || 'No description available.'}
               </p>
             </div>
 
             {/* What you'll learn */}
-            <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-black/40">
-              <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                <span className="text-green-500 text-3xl">📗</span>
-                <span>What You'll Learn</span>
-              </h2>
+            {course?.whatYouLearn && course.whatYouLearn.length > 0 && (
+              <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-black/40">
+                <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                  <span className="text-green-500 text-3xl">📗</span>
+                  <span>What You'll Learn</span>
+                </h2>
 
-              <ul className="list-disc text-white ml-6 space-y-3 leading-relaxed">
-                {(course.whatYouLearn || []).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            </div>
+                <ul className="list-disc text-white ml-6 space-y-3 leading-relaxed">
+                  {course.whatYouLearn.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Modules */}
-            <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-6 shadow-xl border border-black/40">
-              <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                <span className="text-green-500 text-3xl">📗</span>
-                <span>Course Modules</span>
-              </h2>
+            {course?.modules && course.modules.length > 0 && (
+              <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-6 shadow-xl border border-black/40">
+                <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                  <span className="text-green-500 text-3xl">📗</span>
+                  <span>Course Modules</span>
+                </h2>
 
-              <div className="space-y-4">
-                {(course.modules || []).map((module) => (
-                  <div 
-                    key={module.number}
-                    className="bg-gray-900/60 ring-1 ring-white/5 rounded-xl p-4 hover:bg-gray-800 transition flex items-center justify-between"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-500 text-black font-bold">
-                        {module.number}
-                      </div>
-                      <div>
-                        <p className="text-lg font-semibold">{module.title}</p>
-                        <p className="text-sm text-gray-400">{module.shortDescription || ''}</p>
-                      </div>
-                    </div>
-                    <button 
-                      type="button"
-                      onClick={() => toggleModule(module.number)}
-                      className="p-2 text-gray-400"
-                      aria-expanded={expandedModules[module.number] || false}
+                <div className="space-y-4">
+                  {course.modules.map((module) => (
+                    <div 
+                      key={module.number}
+                      className="bg-gray-900/60 ring-1 ring-white/5 rounded-xl p-4 hover:bg-gray-800 transition flex items-center justify-between"
                     >
-                      <i className={`fa-solid ${expandedModules[module.number] ? 'fa-chevron-up' : 'fa-chevron-right'}`}></i>
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-500 text-black font-bold">
+                          {module.number}
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold">{module.title}</p>
+                          <p className="text-sm text-gray-400">{module.shortDescription || ''}</p>
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => toggleModule(module.number)}
+                        className="p-2 text-gray-400"
+                        aria-expanded={expandedModules[module.number] || false}
+                      >
+                        <i className={`fa-solid ${expandedModules[module.number] ? 'fa-chevron-up' : 'fa-chevron-right'}`}></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* RIGHT SIDE */}
@@ -295,13 +321,21 @@ const CourseDetailsPage = () => {
               <h3 className="text-2xl font-bold mb-6">Instructor</h3>
 
               <div className="flex justify-center mb-4">
-                <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-black font-bold text-xl">
-                  {course.instructor?.initials || ''}
-                </div>
+                {instructor?.image ? (
+                  <img 
+                    src={instructor.image.startsWith('http') ? instructor.image : `${api.defaults.baseURL?.replace(/\/api\/?$/, '') || 'http://localhost:8000'}/storage/${instructor.image}`}
+                    alt={instructorName}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-black font-bold text-xl">
+                    {instructorInitials}
+                  </div>
+                )}
               </div>
 
-              <h4 className="text-xl font-semibold">{course.instructor?.name || ''}</h4>
-              <p className="text-gray-400 text-sm mt-1">{course.instructor?.title || ''}</p>
+              <h4 className="text-xl font-semibold">{instructorName}</h4>
+              <p className="text-gray-400 text-sm mt-1">{instructorTitle}</p>
             </div>
 
             {/* Course details */}
@@ -311,22 +345,34 @@ const CourseDetailsPage = () => {
               <div className="space-y-4 text-gray-300">
                 <div className="flex justify-between">
                   <span>Duration</span>
-                  <span className="font-semibold">{course.duration}</span>
+                  <span className="font-semibold">{duration}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Students</span>
-                  <span className="font-semibold">{course.students}</span>
+                  <span className="font-semibold">{enrolledCount}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Rating</span>
                   <span className="font-semibold flex items-center gap-1">
-                    ★ {course.rating}
+                    ★ {rating}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Level</span>
-                  <span className="font-semibold">{course.level}</span>
+                  <span className="font-semibold">{level}</span>
                 </div>
+                {course?.language && (
+                  <div className="flex justify-between">
+                    <span>Language</span>
+                    <span className="font-semibold">{course.language}</span>
+                  </div>
+                )}
+                {course?.lessons && (
+                  <div className="flex justify-between">
+                    <span>Lessons</span>
+                    <span className="font-semibold">{course.lessons}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

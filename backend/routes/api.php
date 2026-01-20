@@ -38,6 +38,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard']);
     // Student payments (for report page)
     Route::get('/student/payments', [\App\Http\Controllers\Api\PaymentController::class, 'listForUser']);
+    
+    // Course progress tracking (per student per course)
+    Route::get('/courses/{courseId}/progress', [\App\Http\Controllers\ProgressController::class, 'getProgress']);
+    Route::post('/courses/{courseId}/progress', [\App\Http\Controllers\ProgressController::class, 'updateProgress']);
+    
     // Update authenticated user's profile (including student profile fields)
     Route::put('/user/profile', function (Illuminate\Http\Request $request) {
         $user = $request->user();
@@ -154,6 +159,38 @@ Route::get('/courses/{id}', [CourseController::class, 'show']);
 Route::get('/instructors', [InstructorController::class, 'index']);
 Route::get('/instructors/featured', [InstructorController::class, 'featured']);
 Route::get('/instructors/{id}', [InstructorController::class, 'show']);
+
+// Public stats endpoint
+Route::get('/stats', function() {
+    $studentsCount = User::where('role', 'student')->count();
+    $coursesCount = \App\Models\Course::where('status', 'Published')->count();
+    $instructorsCount = User::where('role', 'instructor')->count();
+    
+    return response()->json([
+        'students' => $studentsCount,
+        'courses' => $coursesCount,
+        'instructors' => $instructorsCount,
+    ]);
+});
+
+// Public leaderboard endpoint
+Route::get('/leaderboard', function() {
+    $students = User::where('role', 'student')
+        ->orderBy('xp', 'desc')
+        ->take(10)
+        ->get(['id', 'name', 'email', 'xp'])
+        ->map(function($student, $index) {
+            return [
+                'rank' => $index + 1,
+                'name' => $student->name,
+                'xp' => $student->xp ?? 0,
+                'courses' => 0, // Will count enrollments
+                'avatar' => "https://api.dicebear.com/6.x/initials/svg?seed=" . urlencode($student->name)
+            ];
+        });
+    
+    return response()->json($students);
+});
 // Allow users to submit instructor requests (creates a Pending instructor profile)
 Route::post('/instructors/requests', [InstructorController::class, 'submitRequest']);
 // Public endpoint to check if email is declined
@@ -216,14 +253,13 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::post('/courses/{id}', [CourseController::class, 'update']); // Support _method=PUT for FormData
     Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
     
-    // Get users who have approved instructor profiles (admin)
+    // Get users who have approved instructor profiles
     Route::get('/instructors/users', function() {
-        $users = \App\Models\User::whereExists(function($q) {
-            $q->select(\DB::raw(1))
-              ->from('instructors')
-              ->whereColumn('instructors.user_id', 'users.id')
-              ->orWhereColumn('instructors.email', 'users.email');
-        })->get(['id', 'name', 'email']);
+        $users = \App\Models\User::whereHas('instructor', function($q) {
+            $q->where('status', 'Approved');
+        })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
 
         return response()->json($users);
     });
@@ -242,6 +278,35 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     // Student management (admin)
     Route::get('/students', function() {
         return response()->json(User::where('role', 'student')->with('course')->get());
+    });
+    
+    Route::get('/students/{id}', function($id) {
+        $student = User::where('role', 'student')->with('course')->findOrFail($id);
+        return response()->json($student);
+    });
+    
+    Route::get('/students/{id}/enrollments', function($id) {
+        try {
+            $enrollments = \App\Models\Enrollment::where('user_id', $id)
+                ->with('course')
+                ->orderBy('enrolled_at', 'desc')
+                ->get();
+            return response()->json($enrollments);
+        } catch (\Exception $e) {
+            return response()->json([]);
+        }
+    });
+    
+    Route::get('/students/{id}/payments', function($id) {
+        try {
+            $payments = \App\Models\Payment::where('user_id', $id)
+                ->with('course')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            return response()->json($payments);
+        } catch (\Exception $e) {
+            return response()->json([]);
+        }
     });
 
     Route::put('/students/{id}', function(HttpRequest $request, $id) {
@@ -352,4 +417,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::post('/programs', [ProgramController::class, 'store']);
     Route::put('/programs/{id}', [ProgramController::class, 'update']);
     Route::delete('/programs/{id}', [ProgramController::class, 'destroy']);
+    
+    // Bookings management (admin only)
+    Route::delete('/bookings/{id}', [\App\Http\Controllers\Api\BookingController::class, 'destroy']);
 });

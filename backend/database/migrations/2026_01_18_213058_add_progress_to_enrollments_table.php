@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            //
+            $table->text('completed_lessons')->nullable(); // JSON array of completed lesson keys
+            $table->integer('progress_percentage')->default(0); // Cached percentage
         });
     }
 
@@ -22,7 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            //
+            $table->dropColumn(['completed_lessons', 'progress_percentage']);
         });
     }
 };

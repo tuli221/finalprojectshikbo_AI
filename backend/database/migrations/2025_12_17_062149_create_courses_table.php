@@ -30,18 +30,10 @@ return new class extends Migration
 
             $table->foreignId('instructor_id')->constrained('users');
             // Admin management additional fields moved here:
-            if (!Schema::hasColumn('courses', 'instructor_profile_id')) {
-                $table->foreignId('instructor_profile_id')->nullable()->constrained('instructors')->onDelete('set null');
-            }
-            if (!Schema::hasColumn('courses', 'language')) {
-                $table->string('language')->default('English');
-            }
-            if (!Schema::hasColumn('courses', 'video_url')) {
-                $table->string('video_url')->nullable();
-            }
-            if (!Schema::hasColumn('courses', 'certificate')) {
-                $table->boolean('certificate')->default(true);
-            }
+            $table->unsignedBigInteger('instructor_profile_id')->nullable();
+            $table->string('language')->default('English');
+            $table->string('video_url')->nullable();
+            $table->boolean('certificate')->default(true);
 
             $table->string('status')->default('Draft'); // Draft | Published
 

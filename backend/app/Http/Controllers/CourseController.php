@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Schema;
 
 class CourseController extends Controller
 {
-    /**
-     * Display a listing of all published courses (for public courses page).
-     */
+    
+     // Display a listing of all published courses (for public courses page).
+     
     public function index()
     {
         $courses = Course::with(['instructor', 'instructorProfile'])
@@ -22,9 +22,9 @@ class CourseController extends Controller
         return response()->json($courses);
     }
 
-    /**
-     * Store a newly created course (Admin only).
-     */
+    
+     // Store a newly created course (Admin only).
+     
     public function store(Request $request)
     {
         $request->validate([
@@ -45,7 +45,6 @@ class CourseController extends Controller
             'requirements' => 'nullable|string',
             'what_you_learn' => 'nullable|string',
             'course_modules' => 'nullable|string',
-            'video_url' => 'nullable|url',
             'certificate' => 'nullable|boolean',
         ]);
 
@@ -72,7 +71,6 @@ class CourseController extends Controller
             'requirements' => $request->requirements,
             'what_you_learn' => $request->what_you_learn,
             'course_modules' => $request->course_modules,
-            'video_url' => $request->video_url,
             'certificate' => $request->certificate ?? true,
         ];
 
@@ -94,18 +92,18 @@ class CourseController extends Controller
         ], 201);
     }
 
-    /**
-     * Display the specified course.
-     */
+    
+     //Display the specified course.
+     
     public function show($id)
     {
         $course = Course::with(['instructor', 'instructorProfile'])->findOrFail($id);
         return response()->json($course);
     }
 
-    /**
-     * Update the specified course (Admin only).
-     */
+    
+     // Update the specified course (Admin only).
+     
     public function update(Request $request, $id)
     {
         $course = Course::findOrFail($id);
@@ -133,7 +131,6 @@ class CourseController extends Controller
             'requirements' => 'nullable|string',
             'what_you_learn' => 'nullable|string',
             'course_modules' => 'nullable|string',
-            'video_url' => 'nullable|url',
             'certificate' => 'nullable|boolean',
         ]);
 
@@ -165,9 +162,9 @@ class CourseController extends Controller
         ]);
     }
 
-    /**
-     * Remove the specified course (Admin only).
-     */
+    
+     // Remove the specified course (Admin only).
+     
     public function destroy($id)
     {
         $course = Course::findOrFail($id);
@@ -189,9 +186,9 @@ class CourseController extends Controller
         ]);
     }
 
-    /**
-     * Get all courses for admin dashboard.
-     */
+    
+     // Get all courses for admin dashboard.
+     
     public function getAllCourses()
     {
         $courses = Course::with(['instructor', 'instructorProfile'])
@@ -200,10 +197,10 @@ class CourseController extends Controller
         return response()->json($courses);
     }
 
-    /**
-     * Get courses assigned to authenticated instructor.
-     * Fetches courses where instructor_id matches the authenticated user's id.
-     */
+    
+     // Get courses assigned to authenticated instructor.
+     // Fetches courses where instructor_id matches the authenticated user's id.
+     
     public function myCourses()
     {
         $user = Auth::user();

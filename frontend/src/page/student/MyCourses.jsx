@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import courseApi from '../../config/courseApi'
 import api from '../../config/api'
 import { useNavigate } from 'react-router-dom'
+import { getProgress, calculateProgress, calculateTotalLessons } from '../../utils/courseProgress'
 
 const MyCourses = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -10,26 +11,14 @@ const MyCourses = () => {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
 
-  // Helper function to get course progress from localStorage and modules
-  const getCourseProgress = (courseId, modules) => {
-    // Calculate total lessons from modules
-    const totalLessons = modules.reduce((total, module) => {
-      return total + (module.lessons?.length || 0)
-    }, 0)
+  // Helper function to get course progress from API
+  const getCourseProgress = async (courseId, modules) => {
+    const totalLessons = calculateTotalLessons(modules)
 
-    // Load completed lessons from localStorage
-    const saved = localStorage.getItem(`course_progress_${courseId}`)
-    let completedCount = 0
-    if (saved) {
-      try {
-        const data = JSON.parse(saved)
-        completedCount = Array.isArray(data.completed) ? data.completed.length : 0
-      } catch (e) {
-        console.error('Error loading progress:', e)
-      }
-    }
-
-    const progress = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
+    // Load completed lessons from API
+    const progressData = await getProgress(courseId)
+    const completedCount = progressData.completedLessons.length
+    const progress = calculateProgress(progressData.completedLessons, modules)
     
     return {
       totalLessons,
@@ -103,8 +92,8 @@ const MyCourses = () => {
                 }
               }
 
-              // Get actual progress from modules and localStorage
-              const progressData = getCourseProgress(course.id, parsedModules)
+              // Get actual progress from modules and API
+              const progressData = await getCourseProgress(course.id, parsedModules)
 
               return {
                 ...course,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import api from '../../../config/api'
 import { useNavigate } from 'react-router-dom'
+import getCourseImage from '../../../utils/getCourseImage'
 
 const CourseCard = ({ course }) => {
   const navigate = useNavigate()
@@ -25,12 +26,7 @@ const CourseCard = ({ course }) => {
     : ''
   const lessons = course.lessons ?? 0
   // Normalize thumbnail to an absolute URL if provided by backend
-  let imageSrc = course.imageSrc || ''
-  if (!imageSrc && course.thumbnail) {
-    const base = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8000'
-    imageSrc = course.thumbnail.startsWith('http') ? course.thumbnail : `${base}/storage/${course.thumbnail}`
-  }
-  if (!imageSrc) imageSrc = '/assets/React.jpg'
+  const imageSrc = getCourseImage(course)
 
   const toggleDescription = () => {
     setIsExpanded(!isExpanded)

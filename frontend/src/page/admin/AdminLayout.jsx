@@ -1,21 +1,19 @@
 import React, { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import TopBar from '../../components/TopBar'
+import { useAuth } from '../../context/AuthContext'
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
 
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('user')
-    } finally {
-      setShowProfileDropdown(false)
-      navigate('/')
-    }
+  const handleLogout = async () => {
+    await logout()
+    setShowProfileDropdown(false)
+    navigate('/')
   }
 
   const isActive = (path) => {
@@ -96,8 +94,8 @@ const AdminLayout = () => {
           onToggleSidebar={() => setSidebarOpen(true)}
           showSearch={false}
           profile={{
-            name: 'Shikbo Admin',
-            avatar: 'https://api.dicebear.com/6.x/initials/svg?seed=SA',
+            name: user?.name || 'Admin',
+            avatar: `https://api.dicebear.com/6.x/initials/svg?seed=${user?.name || 'Admin'}`,
             actions: [
               { label: 'Logout', onClick: handleLogout }
             ]

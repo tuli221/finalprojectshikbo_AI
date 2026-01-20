@@ -70,6 +70,12 @@ const BookingPage = () => {
         navigate('/learning-center')
         return
       } catch (e) {
+        // Check if limit reached
+        if (e.response?.data?.limit_reached) {
+          alert(e.response.data.message || 'This program has reached its booking limit of 25 students.')
+          setSaving(false)
+          return
+        }
         // fallback to localStorage
       }
 

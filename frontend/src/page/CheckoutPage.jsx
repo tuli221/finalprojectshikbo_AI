@@ -93,9 +93,24 @@ const CheckoutPage = () => {
       return
     }
 
+    setProcessing(true)
     try {
-      setProcessing(true)
-      
+      // If user is authenticated, update their profile with provided info before payment
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        try {
+          await api.put('/user/profile', {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address
+          })
+        } catch (err) {
+          // Log but do not block payment if profile update fails
+          console.warn('Profile update failed, continuing to payment', err)
+        }
+      }
+
       // Calculate payment amount (full payment only)
       const fullPrice = (course.discount_price !== undefined && course.discount_price !== null && course.discount_price !== '')
         ? course.discount_price

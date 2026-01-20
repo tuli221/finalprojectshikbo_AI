@@ -34,7 +34,7 @@ const Hero = ({ openChat }) => {
             onClick={openChat}
             className="w-full sm:w-auto border-2 border-green-400 text-white hover:bg-green-600 hover:text-white font-semibold px-3 py-3 sm:px-8 sm:py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
           >
-            Ask AI Assistant
+            Ask Assistant
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../config/api'
+import getCourseImage from '../../utils/getCourseImage'
 
 const defaultStats = {
   course_enrolled: 0,
@@ -87,20 +88,7 @@ export default function StudentDashboard() {
                 <div className="h-36 bg-gray-50 rounded-md mb-4 flex items-start">
                   <img
                     alt={c.title}
-                    src={(() => {
-                      const src = c.thumbnail || c.image || c.thumbnail_url || c.image_url || ''
-                      if (!src) return '/assets/downloadShikbo.png'
-                      // If already absolute or root-relative, use as is
-                      if (src.startsWith('http') || src.startsWith('/')) return src
-                      // Derive API host from axios instance baseURL
-                      try {
-                        const base = api.defaults?.baseURL || ''
-                        const host = base.replace(/\/api\/?$/i, '')
-                        return `${host}/storage/${src}`
-                      } catch (e) {
-                        return `/storage/${src}`
-                      }
-                    })()}
+                    src={getCourseImage(c)}
                     className="h-full w-full object-cover rounded-md"
                   />
                 </div>

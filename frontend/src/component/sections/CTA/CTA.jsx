@@ -10,7 +10,7 @@ const CTA = ({ openChat }) => {
       <br />
       <div className="space-x-4">
         <button onClick={openChat} className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-500 transition inline-block">
-          <i className="fa-solid fa-robot text-white text-2xl"></i> Talk to AI Assistant
+          <i className="fa-solid fa-robot text-white text-2xl"></i> Talk to Assistant
         </button>
       </div>
     </section>

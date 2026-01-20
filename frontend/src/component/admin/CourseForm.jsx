@@ -15,10 +15,6 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
     type: '',
     language: 'English',
     status: 'Draft',
-    requirements: '',
-    what_you_learn: '',
-    course_modules: '',
-    video_url: '',
     certificate: true,
   })
   const [thumbnailFile, setThumbnailFile] = useState(null)
@@ -128,6 +124,25 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
           </select>
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Type <span className="text-red-500">*</span></label>
+          {fixedType ? (
+            <>
+              <div className="w-full border rounded-lg px-3 py-2 text-gray-700">{fixedType}</div>
+              <input type="hidden" name="type" value={fixedType} />
+            </>
+          ) : (
+            <select name="type" value={formData.type} onChange={handleInputChange} required className="w-full border rounded-lg px-3 py-2">
+              <option value="">Select type</option>
+              <option value="Online">Online</option>
+              <option value="Offline">Offline</option>
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* Language and Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Language <span className="text-red-500">*</span></label>
           <select name="language" value={formData.language} onChange={handleInputChange} required className="w-full border rounded-lg px-3 py-2">
             <option value="English">English</option>
@@ -135,27 +150,6 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
             <option value="Both">Both (English & Bengali)</option>
           </select>
         </div>
-      </div>
-
-      {/* Type (Online / Offline) */}
-      <div className="mt-3">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-        {fixedType ? (
-          <>
-            <div className="w-full border rounded-lg px-3 py-2 text-gray-700">{fixedType}</div>
-            <input type="hidden" name="type" value={fixedType} />
-          </>
-        ) : (
-          <select name="type" value={formData.type} onChange={handleInputChange} className="w-full border rounded-lg px-3 py-2">
-            <option value="">Select type</option>
-            <option value="Online">Online</option>
-            <option value="Offline">Offline</option>
-          </select>
-        )}
-      </div>
-
-      {/* Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Status <span className="text-red-500">*</span></label>
           <select name="status" value={formData.status} onChange={handleInputChange} required className="w-full border rounded-lg px-3 py-2">
@@ -166,16 +160,10 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
         </div>
       </div>
 
-      {/* Thumbnail and Video URL */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Course Thumbnail</label>
-          <input type="file" onChange={handleFileChange} accept="image/*" className="w-full border rounded-lg px-3 py-2" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Video URL (Optional)</label>
-          <input name="video_url" value={formData.video_url} onChange={handleInputChange} className="w-full border rounded-lg px-3 py-2" />
-        </div>
+      {/* Thumbnail */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Course Thumbnail</label>
+        <input type="file" onChange={handleFileChange} accept="image/*" className="w-full border rounded-lg px-3 py-2" />
       </div>
 
       {/* Certificate Checkbox */}
@@ -190,24 +178,6 @@ const CourseForm = ({ initialValues = {}, instructors = [], instructorUsers = []
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Course Description <span className="text-red-500">*</span></label>
             <textarea name="description" value={formData.description} onChange={handleInputChange} required rows="4" className="w-full border rounded-lg px-3 py-2" />
-          </div>
-
-          {/* Requirements */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Requirements (Optional)</label>
-            <textarea name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
-          </div>
-
-          {/* What You'll Learn */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">What You'll Learn (Optional)</label>
-            <textarea name="what_you_learn" value={formData.what_you_learn} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
-          </div>
-
-          {/* Course Modules */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Course Modules (Optional)</label>
-            <textarea name="course_modules" value={formData.course_modules} onChange={handleInputChange} rows="3" className="w-full border rounded-lg px-3 py-2" />
           </div>
         </>
       )}

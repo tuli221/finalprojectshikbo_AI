@@ -26,6 +26,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'enrollment_date',
+        'xp',
     ];
 
     /**
@@ -80,6 +81,14 @@ class User extends Authenticatable
     public function studentProfile()
     {
         return $this->hasOne(\App\Models\StudentProfile::class);
+    }
+
+    /**
+     * Instructor profile one-to-one relation.
+     */
+    public function instructor()
+    {
+        return $this->hasOne(\App\Models\Instructor::class, 'user_id');
     }
 
     /**

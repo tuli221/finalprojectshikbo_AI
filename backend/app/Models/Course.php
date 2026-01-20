@@ -25,7 +25,6 @@ class Course extends Model
         'instructor_profile_id',
         'status',
         'language',
-        'video_url',
         'certificate',
     ];
 

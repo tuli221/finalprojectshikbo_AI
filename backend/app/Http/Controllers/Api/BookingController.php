@@ -31,6 +31,15 @@ class BookingController extends Controller
 
         $program = Program::find($data['program_id']);
 
+        // Check booking limit: maximum 25 students per program
+        $currentBookingCount = Booking::where('program_id', $data['program_id'])->count();
+        if ($currentBookingCount >= 25) {
+            return response()->json([
+                'message' => 'This program has no available slots. Please choose another program.',
+                'limit_reached' => true
+            ], 422);
+        }
+
         // if slot_label not provided, map known slot ids to labels (fallback)
         if (empty($data['slot_label']) && !empty($data['slot_id'])) {
             $map = [
@@ -49,5 +58,13 @@ class BookingController extends Controller
         }
 
         return response()->json(['message' => 'Booking created', 'booking' => $booking], 201);
+    }
+
+    public function destroy($id)
+    {
+        $booking = Booking::findOrFail($id);
+        $booking->delete();
+        
+        return response()->json(['message' => 'Booking deleted successfully']);
     }
 }

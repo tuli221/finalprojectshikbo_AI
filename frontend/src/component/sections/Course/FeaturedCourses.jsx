@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CourseCard from './CourseCard'
 import { courseApi } from '../../../config/courseApi'
+import api from '../../../config/api'
 
 // Featured courses now fetch live data from API (falls back to empty array)
 
@@ -10,11 +11,39 @@ const FeaturedCourses = () => {
   const [counts, setCounts] = useState({
     students: 0,
     courses: 0,
-    certificates: 0,
-    interactions: 0
+    instructors: 0
+  })
+
+  const [targetCounts, setTargetCounts] = useState({
+    students: 0,
+    courses: 0,
+    instructors: 0
   })
 
   const [courses, setCourses] = useState([])
+
+  // Fetch real stats from backend
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await api.get('/stats')
+        setTargetCounts({
+          students: response.data.students,
+          courses: response.data.courses,
+          instructors: response.data.instructors
+        })
+      } catch (err) {
+        console.error('Failed to fetch stats', err)
+        // Fallback to default values
+        setTargetCounts({
+          students: 0,
+          courses: 0,
+          instructors: 0
+        })
+      }
+    }
+    fetchStats()
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -30,15 +59,12 @@ const FeaturedCourses = () => {
     return () => { mounted = false }
   }, [])
 
-  const targetCounts = {
-    students: 5000,
-    courses: 50,
-    certificates: 2500,
-    interactions: 25000
-  }
-
   // Stats counting animation
   useEffect(() => {
+    if (targetCounts.students === 0 && targetCounts.courses === 0 && targetCounts.instructors === 0) {
+      return // Don't animate if no data loaded yet
+    }
+
     const duration = 2000
     const steps = 60
     const stepDuration = duration / steps
@@ -64,7 +90,7 @@ const FeaturedCourses = () => {
     return () => {
       Object.values(counters).forEach(interval => clearInterval(interval))
     }
-  }, [])
+  }, [targetCounts])
 
   return (
     <>
@@ -116,17 +142,12 @@ const FeaturedCourses = () => {
 
         {/* Card 3 */}
         <div className="flex flex-col items-center text-center">
-          <i className="fa-solid fa-award text-green-500 text-4xl mb-3"></i>
-          <h3 className="text-3xl font-bold text-gray-300">{counts.certificates.toLocaleString()}+</h3>
-          <p className="text-gray-300">Certificates Issued</p>
+          <i className="fa-solid fa-chalkboard-teacher text-green-500 text-4xl mb-3"></i>
+          <h3 className="text-3xl font-bold text-gray-300">{counts.instructors.toLocaleString()}+</h3>
+          <p className="text-gray-300">Instructors</p>
         </div>
 
-        {/* Card 4 */}
-        <div className="flex flex-col items-center text-center">
-          <i className="fa-solid fa-brain text-green-500 text-4xl mb-3"></i>
-          <h3 className="text-3xl font-bold text-gray-300">{counts.interactions.toLocaleString()}+</h3>
-          <p className="text-gray-300">AI Interactions</p>
-        </div>
+        
       </section>
     </>
   )
