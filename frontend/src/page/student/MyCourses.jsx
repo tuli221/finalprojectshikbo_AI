@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import courseApi from '../../config/courseApi'
 import api from '../../config/api'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getProgress, calculateProgress, calculateTotalLessons } from '../../utils/courseProgress'
 
 const MyCourses = () => {
-  const [searchQuery, setSearchQuery] = useState('')
+  const { searchQuery = '' } = useOutletContext() || {}
   const [enrolledCourses, setEnrolledCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -132,6 +132,7 @@ const MyCourses = () => {
   }, [])
 
   const filteredCourses = enrolledCourses.filter((course) => {
+    if (!searchQuery || searchQuery.trim() === '') return true
     const title = (course.title || course.name || '').toString().toLowerCase()
     const category = (course.category || '').toString().toLowerCase()
     return title.includes(searchQuery.toLowerCase()) || category.includes(searchQuery.toLowerCase())
@@ -150,15 +151,8 @@ const MyCourses = () => {
 
   return (
     <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+      <div className="mb-6">
         <h3 className="text-xl md:text-2xl font-bold text-gray-800">My Enrolled Courses</h3>
-        <input
-          type="text"
-          placeholder="Search courses..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm md:text-base"
-        />
       </div>
 
       {filteredCourses.length === 0 ? (

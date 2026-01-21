@@ -8,6 +8,14 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\CourseInformationController;
 use App\Http\Controllers\Api\ProgramController;
+use App\Http\Controllers\Api\StatsController;
+use App\Http\Controllers\Api\UserProfileController;
+use App\Http\Controllers\Api\InstructorStudentController;
+use App\Http\Controllers\Api\Admin\StudentController as AdminStudentController;
+use App\Http\Controllers\Api\Admin\InstructorUserController;
+use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Api\Admin\AnalyticsController;
+use App\Http\Controllers\Api\Admin\InstructorStudentController as AdminInstructorStudentController;
 use App\Models\User;
 use Illuminate\Http\Request as HttpRequest;
 
@@ -22,6 +30,11 @@ use Illuminate\Http\Request as HttpRequest;
 |
 */
 
+/*
+|--------------------------------------------------------------------------
+|  Authentication Routes (লগইন/রেজিস্ট্রেশন)
+|--------------------------------------------------------------------------
+*/
 Route::post('/login', [LoginController::class, 'store']);
 Route::post('/register', [RegisterController::class, 'store']);
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth:sanctum');
@@ -30,197 +43,34 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// OTP API routes (authenticated) - top-level
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/otp/verify', [\App\Http\Controllers\Auth\OtpController::class, 'apiVerify']);
-    Route::post('/otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'apiResend']);
-    // Student dashboard
-    Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard']);
-    // Student payments (for report page)
-    Route::get('/student/payments', [\App\Http\Controllers\Api\PaymentController::class, 'listForUser']);
-    
-    // Course progress tracking (per student per course)
-    Route::get('/courses/{courseId}/progress', [\App\Http\Controllers\ProgressController::class, 'getProgress']);
-    Route::post('/courses/{courseId}/progress', [\App\Http\Controllers\ProgressController::class, 'updateProgress']);
-    
-    // Update authenticated user's profile (including student profile fields)
-    Route::put('/user/profile', function (Illuminate\Http\Request $request) {
-        $user = $request->user();
-        if (! $user) {
-            return response()->json(['message' => 'Not authenticated'], 401);
-        }
+/*
+|--------------------------------------------------------------------------
+| ২. Public Routes 
+|--------------------------------------------------------------------------
+*/
 
-        $data = $request->only(['name', 'email', 'phone', 'bio', 'address']);
-
-        // update user primary fields
-        if (isset($data['name'])) $user->name = $data['name'];
-        if (isset($data['email'])) $user->email = $data['email'];
-        $user->save();
-
-        // update or create student_profile
-        try {
-            $profileData = [
-                'phone' => $data['phone'] ?? null,
-                'address' => $data['address'] ?? null,
-                'bio' => $data['bio'] ?? null,
-            ];
-            \App\Models\StudentProfile::updateOrCreate(
-                ['user_id' => $user->id],
-                $profileData
-            );
-        } catch (\Exception $e) {
-            // ignore profile write errors but log
-            logger()->error('Failed to save student profile: '.$e->getMessage());
-        }
-
-        // Only eager-load studentProfile if the table exists (migrations may not have run yet)
-        try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('student_profiles')) {
-                $user = $user->load('studentProfile');
-            }
-        } catch (\Throwable $e) {
-            // If Schema check fails for any reason, continue without the relation
-        }
-
-        return response()->json(['message' => 'Profile saved', 'user' => $user]);
-    });
-    // Allow authenticated user to change their password
-    Route::post('/user/password', function (Illuminate\Http\Request $request) {
-        $user = $request->user();
-        if (! $user) {
-            return response()->json(['message' => 'Not authenticated'], 401);
-        }
-
-        $data = $request->only(['current_password', 'new_password', 'new_password_confirmation']);
-        if (!isset($data['current_password']) || !isset($data['new_password'])) {
-            return response()->json(['message' => 'Missing fields'], 422);
-        }
-
-        // verify current password
-        if (! \Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {
-            return response()->json(['message' => 'Current password is incorrect'], 403);
-        }
-
-        if ($data['new_password'] !== ($data['new_password_confirmation'] ?? null)) {
-            return response()->json(['message' => 'Password confirmation does not match'], 422);
-        }
-
-        // update password
-        $user->password = \Illuminate\Support\Facades\Hash::make($data['new_password']);
-        $user->save();
-
-        return response()->json(['message' => 'Password updated']);
-    });
-
-    // Allow authenticated user to unenroll from their assigned course
-    Route::post('/user/unenroll', function (Illuminate\Http\Request $request) {
-        $user = $request->user();
-        if (! $user) {
-            return response()->json(['message' => 'Not authenticated'], 401);
-        }
-
-        $oldCourseId = $user->course_id;
-        if (! $oldCourseId) {
-            return response()->json(['message' => 'No enrolled course'], 400);
-        }
-
-        // decrement enrolled_count on old course
-        try {
-            $oldCourse = \App\Models\Course::find($oldCourseId);
-            if ($oldCourse && ($oldCourse->enrolled_count ?? 0) > 0) {
-                $oldCourse->enrolled_count = max(0, ($oldCourse->enrolled_count ?? 0) - 1);
-                $oldCourse->save();
-            }
-        } catch (\Exception $e) {}
-
-        // remove pivot entry if exists
-        try {
-            \Illuminate\Support\Facades\DB::table('course_user')
-                ->where('user_id', $user->id)
-                ->where('course_id', $oldCourseId)
-                ->delete();
-        } catch (\Exception $e) {}
-
-        // clear user's course assignment
-        $user->course_id = null;
-        $user->enrollment_date = null;
-        $user->save();
-
-        return response()->json(['message' => 'Unenrolled successfully', 'user' => $user->load('course')]);
-    });
-
-    // Initiate SSLCommerz payment (creates payment record and returns redirect URL)
-    Route::post('/sslcommerz/initiate', [\App\Http\Controllers\Api\PaymentController::class, 'initiate']);
-});
-
-// Public routes - anyone can view
+// Course routes
 Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{id}', [CourseController::class, 'show']);
+
+// Instructor routes
 Route::get('/instructors', [InstructorController::class, 'index']);
 Route::get('/instructors/featured', [InstructorController::class, 'featured']);
 Route::get('/instructors/{id}', [InstructorController::class, 'show']);
-
-// Public stats endpoint
-Route::get('/stats', function() {
-    $studentsCount = User::where('role', 'student')->count();
-    $coursesCount = \App\Models\Course::where('status', 'Published')->count();
-    $instructorsCount = User::where('role', 'instructor')->count();
-    
-    return response()->json([
-        'students' => $studentsCount,
-        'courses' => $coursesCount,
-        'instructors' => $instructorsCount,
-    ]);
-});
-
-// Public leaderboard endpoint
-Route::get('/leaderboard', function() {
-    $students = User::where('role', 'student')
-        ->orderBy('xp', 'desc')
-        ->take(10)
-        ->get(['id', 'name', 'email', 'xp'])
-        ->map(function($student, $index) {
-            return [
-                'rank' => $index + 1,
-                'name' => $student->name,
-                'xp' => $student->xp ?? 0,
-                'courses' => 0, // Will count enrollments
-                'avatar' => "https://api.dicebear.com/6.x/initials/svg?seed=" . urlencode($student->name)
-            ];
-        });
-    
-    return response()->json($students);
-});
-// Allow users to submit instructor requests (creates a Pending instructor profile)
 Route::post('/instructors/requests', [InstructorController::class, 'submitRequest']);
-// Public endpoint to check if email is declined
-Route::post('/instructors/check-declined', function(Illuminate\Http\Request $request) {
-    $email = $request->input('email');
-    if (!$email) {
-        return response()->json(['declined' => false]);
-    }
-    
-    $declined = \App\Models\InstructorRequest::where('email', $email)
-        ->where('status', 'Declined')
-        ->exists();
-    
-    return response()->json(['declined' => $declined]);
-});
+Route::post('/instructors/check-declined', [StatsController::class, 'checkDeclined']);
 
-// Learning Center Programs (public)
+// Stats and Leaderboard
+Route::get('/stats', [StatsController::class, 'getStats']);
+Route::get('/leaderboard', [StatsController::class, 'getLeaderboard']);
+
+// Programs routes
 Route::get('/programs', [ProgramController::class, 'index']);
 Route::get('/programs/{id}', [ProgramController::class, 'show']);
 
-// Public booking endpoint - creates a booking and sends confirmation email
+// Booking routes
 Route::post('/bookings', [\App\Http\Controllers\Api\BookingController::class, 'store']);
-// Allow fetching bookings (admin UI or debugging)
 Route::get('/bookings', [\App\Http\Controllers\Api\BookingController::class, 'index']);
-
-// Simulated gateway redirect and callback for testing
-Route::get('/sslcommerz/redirect/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'gatewayRedirect']);
-Route::post('/sslcommerz/callback/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'callback']);
-// Fetch payment by transaction id (public)
-Route::get('/sslcommerz/payment/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'getPayment']);
 
 // Course Information routes
 Route::get('/course-information', [CourseInformationController::class, 'index']);
@@ -230,194 +80,98 @@ Route::post('/course-information', [CourseInformationController::class, 'store']
 Route::put('/course-information/{id}', [CourseInformationController::class, 'update']);
 Route::delete('/course-information/{id}', [CourseInformationController::class, 'destroy']);
 
-// Instructor routes - view assigned courses
+// Payment routes
+Route::get('/sslcommerz/redirect/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'gatewayRedirect']);
+Route::post('/sslcommerz/callback/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'callback']);
+Route::get('/sslcommerz/payment/{tran}', [\App\Http\Controllers\Api\PaymentController::class, 'getPayment']);
+
+
+// Student Routes (After login for student student)
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/my-courses', [CourseController::class, 'myCourses']);
-    Route::get('/instructor/students', function(Request $request) {
-        $user = $request->user();
-        if (!$user || $user->role !== 'instructor') {
-            return response()->json(['message' => 'Only instructors can access'], 403);
-        }
-        $courseIds = \App\Models\Course::where('instructor_id', $user->id)->pluck('id')->toArray();
-        $students = User::where('role', 'student')->whereIn('course_id', $courseIds)->with('course')->get();
-        return response()->json($students);
-    });
+    // OTP verification
+    Route::post('/otp/verify', [\App\Http\Controllers\Auth\OtpController::class, 'apiVerify']);
+    Route::post('/otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'apiResend']);
+    
+    // Student dashboard
+    Route::get('/student/dashboard', [\App\Http\Controllers\StudentController::class, 'dashboard']);
+    Route::get('/student/payments', [\App\Http\Controllers\Api\PaymentController::class, 'listForUser']);
+    
+    // Course progress
+    Route::get('/courses/{courseId}/progress', [\App\Http\Controllers\ProgressController::class, 'getProgress']);
+    Route::post('/courses/{courseId}/progress', [\App\Http\Controllers\ProgressController::class, 'updateProgress']);
+    
+    // Profile management
+    Route::put('/user/profile', [UserProfileController::class, 'updateProfile']);
+    
+    // Password change
+    Route::post('/user/password', [UserProfileController::class, 'changePassword']);
+
+    // Unenroll from course
+    Route::post('/user/unenroll', [UserProfileController::class, 'unenroll']);
+
+    // Payment initiation
+    Route::post('/sslcommerz/initiate', [\App\Http\Controllers\Api\PaymentController::class, 'initiate']);
 });
 
-// Admin routes - manage courses and instructors
+
+  // Instructor Routes 
+
+Route::middleware('auth:sanctum')->group(function () {
+    // View assigned courses
+    Route::get('/my-courses', [CourseController::class, 'myCourses']);
+    
+    // View students in instructor's courses
+    Route::get('/instructor/students', [InstructorStudentController::class, 'getStudents']);
+});
+
+
+// Admin Routes 
+
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
-    // Course management
+    
+    // ========== Course Management ==========
     Route::get('/courses', [CourseController::class, 'getAllCourses']);
     Route::post('/courses', [CourseController::class, 'store']);
     Route::put('/courses/{id}', [CourseController::class, 'update']);
-    Route::post('/courses/{id}', [CourseController::class, 'update']); // Support _method=PUT for FormData
+    Route::post('/courses/{id}', [CourseController::class, 'update']);
     Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
     
-    // Get users who have approved instructor profiles
-    Route::get('/instructors/users', function() {
-        $users = \App\Models\User::whereHas('instructor', function($q) {
-            $q->where('status', 'Approved');
-        })
-            ->orderBy('name')
-            ->get(['id', 'name', 'email', 'role']);
-
-        return response()->json($users);
-    });
-    // (admin) other admin routes continue...
+    // ========== Instructor Management ==========
+    Route::get('/instructors/users', [InstructorUserController::class, 'getApprovedInstructorUsers']);
     
-    // Instructor profile management
     Route::post('/instructors', [InstructorController::class, 'store']);
     Route::put('/instructors/{id}', [InstructorController::class, 'update']);
     Route::delete('/instructors/{id}', [InstructorController::class, 'destroy']);
-    // Instructor requests management (admin)
+    
+    // Instructor requests
     Route::get('/instructors/requests', [InstructorController::class, 'listRequests']);
     Route::post('/instructors/requests/{id}/approve', [InstructorController::class, 'approveRequest']);
     Route::post('/instructors/requests/{id}/decline', [InstructorController::class, 'declineRequest']);
     Route::delete('/instructors/requests/{id}', [InstructorController::class, 'deleteRequest']);
 
-    // Student management (admin)
-    Route::get('/students', function() {
-        return response()->json(User::where('role', 'student')->with('course')->get());
-    });
-    
-    Route::get('/students/{id}', function($id) {
-        $student = User::where('role', 'student')->with('course')->findOrFail($id);
-        return response()->json($student);
-    });
-    
-    Route::get('/students/{id}/enrollments', function($id) {
-        try {
-            $enrollments = \App\Models\Enrollment::where('user_id', $id)
-                ->with('course')
-                ->orderBy('enrolled_at', 'desc')
-                ->get();
-            return response()->json($enrollments);
-        } catch (\Exception $e) {
-            return response()->json([]);
-        }
-    });
-    
-    Route::get('/students/{id}/payments', function($id) {
-        try {
-            $payments = \App\Models\Payment::where('user_id', $id)
-                ->with('course')
-                ->orderBy('created_at', 'desc')
-                ->get();
-            return response()->json($payments);
-        } catch (\Exception $e) {
-            return response()->json([]);
-        }
-    });
+    // ========== Student Management ==========
+    Route::get('/students', [AdminStudentController::class, 'index']);
+    Route::get('/students/{id}', [AdminStudentController::class, 'show']);
+    Route::get('/students/{id}/enrollments', [AdminStudentController::class, 'getEnrollments']);
+    Route::get('/students/{id}/payments', [AdminStudentController::class, 'getPayments']);
+    Route::put('/students/{id}', [AdminStudentController::class, 'update']);
+    Route::delete('/students/{id}', [AdminStudentController::class, 'destroy']);
 
-    Route::put('/students/{id}', function(HttpRequest $request, $id) {
-        $user = User::findOrFail($id);
-        $data = $request->only(['name', 'email', 'role', 'phone', 'address', 'course_id', 'enrollment_date']);
+    // Payment Management 
+    Route::get('/payments', [AdminPaymentController::class, 'index']);
 
-        // adjust enrolled_count if course changed
-        $oldCourseId = $user->course_id;
-        $newCourseId = isset($data['course_id']) ? $data['course_id'] : $oldCourseId;
+    // ========== Analytics Dashboard ==========
+    Route::get('/analytics', [AnalyticsController::class, 'index']);
 
-        if ($oldCourseId && $oldCourseId != $newCourseId) {
-            try {
-                $oldCourse = \App\Models\Course::find($oldCourseId);
-                if ($oldCourse && ($oldCourse->enrolled_count ?? 0) > 0) {
-                    $oldCourse->enrolled_count = max(0, ($oldCourse->enrolled_count ?? 0) - 1);
-                    $oldCourse->save();
-                }
-            } catch (\Exception $e) {}
-        }
+    // ========== Instructor's Students View (Admin) ==========
+    Route::get('/instructor/students', [AdminInstructorStudentController::class, 'getStudents']);
 
-        if ($newCourseId && $oldCourseId != $newCourseId) {
-            try {
-                $newCourse = \App\Models\Course::find($newCourseId);
-                if ($newCourse) {
-                    $newCourse->enrolled_count = ($newCourse->enrolled_count ?? 0) + 1;
-                    $newCourse->save();
-                }
-            } catch (\Exception $e) {}
-        }
-
-        $user->fill($data);
-        $user->save();
-        return response()->json($user->load('course'));
-    });
-
-    Route::delete('/students/{id}', function($id) {
-        $user = User::findOrFail($id);
-        // decrement enrolled_count if assigned
-        if ($user->course_id) {
-            try {
-                $course = \App\Models\Course::find($user->course_id);
-                if ($course && ($course->enrolled_count ?? 0) > 0) {
-                    $course->enrolled_count = max(0, ($course->enrolled_count ?? 0) - 1);
-                    $course->save();
-                }
-            } catch (\Exception $e) {}
-        }
-
-        $user->delete();
-        return response()->json(['message' => 'Student deleted']);
-    });
-
-    // Instructor: get students for courses assigned to authenticated instructor
-    Route::get('/instructor/students', function(HttpRequest $request) {
-        $user = $request->user();
-        if (!$user || $user->role !== 'instructor') {
-            return response()->json(['message' => 'Only instructors can access'], 403);
-        }
-
-        $courseIds = \App\Models\Course::where('instructor_id', $user->id)->pluck('id')->toArray();
-
-        // Collect students from enrollments (preferred) and legacy user.course_id
-        $results = [];
-
-        try {
-            $enrollments = \App\Models\Enrollment::whereIn('course_id', $courseIds)
-                ->with(['user', 'course'])
-                ->orderBy('enrolled_at', 'desc')
-                ->get();
-
-            foreach ($enrollments as $en) {
-                $u = $en->user;
-                if (! $u) continue;
-                $results[$u->id] = [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'email' => $u->email,
-                    'role' => $u->role,
-                    'course' => $en->course ? $en->course->only(['id','title']) : null,
-                    'enrollment_date' => $en->enrolled_at ? $en->enrolled_at->toDateString() : ($u->enrollment_date ? $u->enrollment_date : null),
-                ];
-            }
-        } catch (\Exception $e) {
-            // If enrollments table absent or error, ignore and fall back to legacy
-        }
-
-        // Legacy assignments via users.course_id
-        try {
-            $legacy = User::where('role', 'student')->whereIn('course_id', $courseIds)->with('course')->get();
-            foreach ($legacy as $u) {
-                if (isset($results[$u->id])) continue;
-                $results[$u->id] = [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'email' => $u->email,
-                    'role' => $u->role,
-                    'course' => $u->course ? $u->course->only(['id','title']) : null,
-                    'enrollment_date' => $u->enrollment_date ? $u->enrollment_date : null,
-                ];
-            }
-        } catch (\Exception $e) {}
-
-        // Return values
-        return response()->json(array_values($results));
-    });
-
-    // Programs management (admin only)
+    // ========== Programs Management ==========
     Route::post('/programs', [ProgramController::class, 'store']);
     Route::put('/programs/{id}', [ProgramController::class, 'update']);
     Route::delete('/programs/{id}', [ProgramController::class, 'destroy']);
     
-    // Bookings management (admin only)
+    // ========== Bookings Management ==========
     Route::delete('/bookings/{id}', [\App\Http\Controllers\Api\BookingController::class, 'destroy']);
 });

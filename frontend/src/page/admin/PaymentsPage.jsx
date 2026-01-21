@@ -1,68 +1,58 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../../config/api'
 
 const PaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
-  const [transactions] = useState([
-    {
-      id: 'TXN001',
-      user: 'Bob',
-      course: 'AI Fundamentals',
-      amount: 5000,
-      method: 'bKash',
-      status: 'Completed',
-      date: '2024-01-15'
-    },
-    {
-      id: 'TXN002',
-      user: 'Mim',
-      course: 'Web Development',
-      amount: 4500,
-      method: 'Nagad',
-      status: 'Completed',
-      date: '2024-01-14'
-    },
-    {
-      id: 'TXN003',
-      user: 'Sarah Khan',
-      course: 'Data Science',
-      amount: 6000,
-      method: 'Credit Card',
-      status: 'Pending',
-      date: '2024-01-13'
-    },
-    {
-      id: 'TXN004',
-      user: 'John Doe',
-      course: 'MERN Stack',
-      amount: 5500,
-      method: 'bKash',
-      status: 'Completed',
-      date: '2024-01-12'
-    },
-    {
-      id: 'TXN005',
-      user: 'Alice Wong',
-      course: 'Mobile Development',
-      amount: 4800,
-      method: 'Rocket',
-      status: 'Failed',
-      date: '2024-01-11'
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const response = await api.get('/admin/payments')
+        const payments = response.data.payments || []
+        // Transform API data to match frontend format
+        const formatted = payments.map(p => ({
+          id: p.transaction_id || p.id,
+          user: p.user?.name || 'N/A',
+          course: p.course?.title || 'N/A',
+          amount: Number(p.amount) || 0,
+          method: p.payment_method || 'N/A',
+          status: p.status || 'pending',
+          date: new Date(p.created_at).toLocaleDateString('en-CA')
+        }))
+        setTransactions(formatted)
+      } catch (error) {
+        console.error('Failed to fetch payments:', error)
+        setTransactions([])
+      } finally {
+        setLoading(false)
+      }
     }
-  ])
+    fetchPayments()
+  }, [])
 
   const filteredTransactions = transactions.filter(
     (txn) =>
-      txn.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      txn.id.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
       txn.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
       txn.course.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const totalRevenue = transactions
-    .filter((t) => t.status === 'Completed')
+    .filter((t) => t.status?.toLowerCase() === 'completed' || t.status?.toLowerCase() === 'success')
     .reduce((sum, t) => sum + t.amount, 0)
   const pendingAmount = transactions
-    .filter((t) => t.status === 'Pending')
+    .filter((t) => t.status?.toLowerCase() === 'pending')
     .reduce((sum, t) => sum + t.amount, 0)
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-gray-600">Loading payments...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -105,9 +95,7 @@ const PaymentsPage = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="px-3 py-2 border rounded-lg text-sm"
             />
-            <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm shadow">
-              Export Report
-            </button>
+            
           </div>
         </div>
 
@@ -142,9 +130,9 @@ const PaymentsPage = () => {
                   <td className="p-3">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        txn.status === 'Completed'
+                        txn.status?.toLowerCase() === 'completed' || txn.status?.toLowerCase() === 'success'
                           ? 'bg-green-100 text-green-600'
-                          : txn.status === 'Pending'
+                          : txn.status?.toLowerCase() === 'pending'
                           ? 'bg-yellow-100 text-yellow-600'
                           : 'bg-red-100 text-red-600'
                       }`}
@@ -156,12 +144,12 @@ const PaymentsPage = () => {
                     <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">
                       View
                     </button>
-                    {txn.status === 'Pending' && (
+                    {(txn.status?.toLowerCase() === 'pending') && (
                       <button className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm">
                         Approve
                       </button>
                     )}
-                    {txn.status === 'Failed' && (
+                    {(txn.status?.toLowerCase() === 'failed') && (
                       <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm">
                         Retry
                       </button>
@@ -182,9 +170,9 @@ const PaymentsPage = () => {
       <div className="bg-white p-8 rounded-2xl shadow">
         <h3 className="text-xl font-semibold mb-4">Payment Methods</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {['bKash', 'Nagad', 'Rocket', 'Credit Card'].map((method) => {
+          {['bKash', 'Nagad', 'Rocket', 'Card'].map((method) => {
             const methodTotal = transactions
-              .filter((t) => t.method === method && t.status === 'Completed')
+              .filter((t) => t.method?.toLowerCase().includes(method.toLowerCase()) && (t.status?.toLowerCase() === 'completed' || t.status?.toLowerCase() === 'success'))
               .reduce((sum, t) => sum + t.amount, 0)
             return (
               <div key={method} className="border rounded-lg p-4 text-center">

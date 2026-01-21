@@ -21,13 +21,14 @@ const AdminLayout = () => {
   }
 
   const navLinks = [
-    { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/admin/users', label: 'Students', icon: '👥' },
-    { path: '/admin/instructors', label: 'Instructors', icon: '👩‍🏫' },
-    { path: '/admin/courses', label: 'Courses', icon: '📚' },
-    { path: '/admin/programs', label: 'Programs', icon: '🎓' },
-    { path: '/admin/payments', label: 'Payments', icon: '💳' },
-    { path: '/admin/analytics', label: 'Analytics', icon: '📈' }
+    
+    { path: '/admin/dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
+    { path: '/admin/users', label: 'Students', icon: 'fa-solid fa-users' },
+    { path: '/admin/instructors', label: 'Instructors', icon: 'fa-solid fa-chalkboard-user' },
+    { path: '/admin/courses', label: 'Courses', icon: 'fa-solid fa-book' },
+    { path: '/admin/programs', label: 'Programs', icon: 'fa-solid fa-graduation-cap' },
+    { path: '/admin/payments', label: 'Payments', icon: 'fa-solid fa-credit-card' },
+    { path: '/admin/analytics', label: 'Analytics', icon: 'fa-solid fa-chart-line' }
   ]
 
   return (
@@ -64,18 +65,11 @@ const AdminLayout = () => {
                   : 'hover:bg-green-100 hover:text-green-600'
               }`}
             >
-              <span>{link.icon}</span>
+              <i className={link.icon}></i>
               {link.label}
             </Link>
           ))}
         </nav>
-
-        <Link
-          to="/admin/courses/add"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg py-2 transition block text-center"
-        >
-          + Add Course
-        </Link>
       </aside>
 
       {/* Overlay for mobile */}

@@ -192,6 +192,7 @@ class CourseController extends Controller
     public function getAllCourses()
     {
         $courses = Course::with(['instructor', 'instructorProfile'])
+            ->withCount('enrollments')
             ->latest()
             ->get();
         return response()->json($courses);
@@ -219,6 +220,21 @@ class CourseController extends Controller
             ->withCount('enrollments')
             ->latest()
             ->get();
+        
+        // Calculate completion_rate for each course
+        // completion_rate = average of all enrolled students' progress_percentage
+        $courses->each(function ($course) {
+            // Get all enrollments for this course
+            $enrollments = \App\Models\Enrollment::where('course_id', $course->id)->get();
+            
+            if ($enrollments->count() > 0) {
+                // Calculate average progress_percentage
+                $totalProgress = $enrollments->sum('progress_percentage');
+                $course->completion_rate = round($totalProgress / $enrollments->count(), 2);
+            } else {
+                $course->completion_rate = 0;
+            }
+        });
             
         return response()->json($courses);
     }

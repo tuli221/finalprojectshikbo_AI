@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 const InteractPage = () => {
   const [messages, setMessages] = useState([
-    { id: 1, type: 'bot', text: 'Hello! I\'m your AI learning assistant. How can I help you today?' }
+    { id: 1, type: 'bot', text: 'Hello! I\'m your  learning assistant. How can I help you today?' }
   ])
   const [inputMessage, setInputMessage] = useState('')
 

@@ -10,6 +10,7 @@ const DashboardPage = () => {
   const [students, setStudents] = useState([])
   const [instructors, setInstructors] = useState([])
   const [courses, setCourses] = useState([])
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
@@ -18,16 +19,19 @@ const DashboardPage = () => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        // Fetch students, courses, admin users list and public instructor profiles
-        const [sRes, cRes, adminUsersRes, profilesRes] = await Promise.all([
+        // Fetch students, courses, admin users list, public instructor profiles, and payments
+        const [sRes, cRes, adminUsersRes, profilesRes, paymentsRes] = await Promise.all([
           api.get('/admin/students'),
           api.get('/admin/courses'),
           api.get('/admin/instructors/users'),
-          api.get('/instructors')
+          api.get('/instructors'),
+          api.get('/admin/payments')
         ])
 
         setStudents(sRes.data || [])
-        setCourses(cRes.data || [])
+        const coursesData = cRes.data || []
+        setCourses(coursesData)
+        setPayments(paymentsRes.data.payments || [])
 
         const adminUsers = adminUsersRes.data || []
         const profiles = profilesRes.data || []
@@ -44,7 +48,62 @@ const DashboardPage = () => {
         // include only approved profiles
         profiles.filter(p => p.status === 'Approved').forEach(p => push({ id: p.user_id || p.id, name: p.name || '', email: p.email || '', total_courses: p.total_courses || p.courses || 0 }))
 
-        setInstructors(Array.from(map.values()))
+        // Build instructors array and compute total_courses from courses list when missing or zero
+        const instructorsArr = Array.from(map.values())
+
+        // Precompute counts by various keys for robust matching
+        const countsByInstructorId = new Map()
+        const countsByProfileId = new Map()
+        const countsByEmail = new Map()
+
+        coursesData.forEach((c) => {
+          if (!c) return
+          // instructor_id
+          if (c.instructor_id != null) {
+            const key = String(c.instructor_id)
+            countsByInstructorId.set(key, (countsByInstructorId.get(key) || 0) + 1)
+          }
+          // instructor_profile_id
+          if (c.instructor_profile_id != null) {
+            const key = String(c.instructor_profile_id)
+            countsByProfileId.set(key, (countsByProfileId.get(key) || 0) + 1)
+          }
+          // nested relations (instructor, instructorProfile) with email
+          if (c.instructor && c.instructor.email) {
+            const key = String(c.instructor.email).toLowerCase()
+            countsByEmail.set(key, (countsByEmail.get(key) || 0) + 1)
+          }
+          if (c.instructorProfile && c.instructorProfile.email) {
+            const key = String(c.instructorProfile.email).toLowerCase()
+            countsByEmail.set(key, (countsByEmail.get(key) || 0) + 1)
+          }
+        })
+
+        const instructorsWithCounts = instructorsArr.map((u) => {
+          const existing = typeof u.total_courses === 'number' ? u.total_courses : null
+          if (existing && existing > 0) return u
+
+          let count = 0
+          const idKey = u.id != null ? String(u.id) : null
+          const emailKey = u.email ? String(u.email).toLowerCase() : null
+
+          if (idKey && countsByInstructorId.has(idKey)) count = countsByInstructorId.get(idKey)
+          else if (idKey && countsByProfileId.has(idKey)) count = countsByProfileId.get(idKey)
+          else if (emailKey && countsByEmail.has(emailKey)) count = countsByEmail.get(emailKey)
+          else {
+            // fallback: count courses where instructor object name/email matches
+            count = coursesData.filter(c => {
+              if (!c) return false
+              if (idKey && (String(c.instructor_id) === idKey || String(c.instructor_profile_id) === idKey)) return true
+              if (emailKey && ((c.instructor && String(c.instructor.email).toLowerCase() === emailKey) || (c.instructorProfile && String(c.instructorProfile.email).toLowerCase() === emailKey))) return true
+              return false
+            }).length
+          }
+
+          return { ...u, total_courses: count }
+        })
+
+        setInstructors(instructorsWithCounts)
       } catch (err) {
         setError(err.response?.data?.message || err.message)
       } finally {
@@ -59,6 +118,23 @@ const DashboardPage = () => {
     // backend may provide a `course` relation or a `course_id` field
     return !!(s?.course || s?.course_id)
   }).length
+
+  // Calculate payment statistics
+  const totalRevenue = (payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+  const successfulPayments = (payments || []).filter(p => p.status?.toLowerCase() === 'completed' || p.status?.toLowerCase() === 'success')
+  const pendingPayments = (payments || []).filter(p => p.status?.toLowerCase() === 'pending')
+  const refundPayments = (payments || []).filter(p => p.status?.toLowerCase() === 'refunded')
+  
+  const successfulTotal = successfulPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+  const pendingTotal = pendingPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+  const refundTotal = refundPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+
+  // Calculate course analytics from enrollments
+  const courseAnalytics = courses.slice(0, 3).map(course => ({
+    name: course.title,
+    count: course.enrollments_count || 0
+  }))
+  const maxEnrollments = Math.max(...courseAnalytics.map(c => c.count), 1)
 
   return (
     <>
@@ -143,16 +219,27 @@ const DashboardPage = () => {
                           {user.status}
                         </td>
                         <td className="p-3">
-                          <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm mr-2"
-                            onClick={() => navigate('/admin/users', { state: { openViewId: user.id } })}
-                          >
-                            View
-                          </button>
-                          <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm"
-                            onClick={() => navigate('/admin/users', { state: { openEditId: user.id } })}
-                          >
-                            Edit
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded transition"
+                              onClick={() => navigate(`/admin/students/${user.id}`)}
+                              title="View"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button 
+                              className="p-1.5 text-gray-600 hover:text-green-600 hover:bg-gray-100 rounded transition"
+                              onClick={() => navigate('/admin/users', { state: { openEditId: user.id } })}
+                              title="Edit"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -173,9 +260,7 @@ const DashboardPage = () => {
                   onChange={(e) => setSearchInstructor(e.target.value)}
                   className="px-3 py-2 border rounded-lg text-sm"
                 />
-                <button className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm shadow">
-                  Approve
-                </button>
+               
               </div>
             </div>
 
@@ -197,14 +282,7 @@ const DashboardPage = () => {
                         <p className="text-sm text-black">Instructor • {instructor.total_courses || instructor.courses || 0} courses</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm" onClick={() => navigate('/admin/instructors', { state: { openViewId: instructor.id } })}>
-                        View Details
-                      </button>
-                      <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-black rounded text-sm" onClick={() => navigate('/admin/instructors', { state: { openEditId: instructor.id } })}>
-                        Edit
-                      </button>
-                    </div>
+
                   </li>
                 )
               })}
@@ -218,78 +296,54 @@ const DashboardPage = () => {
           <div className="bg-white p-4 rounded-2xl shadow">
             <h3 className="text-xl font-semibold mb-4">Payments Overview</h3>
 
-            <div className="text-sm text-black mb-4">Total Revenue: <span className="font-bold text-green-600">৳2,340,000</span></div>
+            <div className="text-sm text-black mb-4">Total Revenue: <span className="font-bold text-green-600">৳{totalRevenue.toLocaleString()}</span></div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-black">Successful</p>
-                  <p className="font-semibold">৳2,100,000</p>
+                  <p className="text-xs text-black">Successful ({successfulPayments.length})</p>
+                  <p className="font-semibold">৳{successfulTotal.toLocaleString()}</p>
                 </div>
-                <span className="text-green-600 font-bold">+8%</span>
+                <span className="text-green-600 font-bold text-xs">✓</span>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-black">Pending</p>
-                  <p className="font-semibold">৳120,000</p>
+                  <p className="text-xs text-black">Pending ({pendingPayments.length})</p>
+                  <p className="font-semibold">৳{pendingTotal.toLocaleString()}</p>
                 </div>
-                <span className="text-yellow-600 font-bold">-2%</span>
+                <span className="text-yellow-600 font-bold text-xs">⏳</span>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-black">Refunds</p>
-                  <p className="font-semibold">৳20,000</p>
+                  <p className="text-xs text-black">Refunds ({refundPayments.length})</p>
+                  <p className="font-semibold">৳{refundTotal.toLocaleString()}</p>
                 </div>
-                <span className="text-red-600 font-bold">+1%</span>
+                <span className="text-red-600 font-bold text-xs">↩</span>
               </div>
             </div>
           </div>
 
           {/* ANALYTICS */}
           <div className="bg-white p-6 rounded-2xl shadow">
-            <h3 className="text-xl font-semibold mb-4">Analytics</h3>
-
-            <svg viewBox="0 0 200 40" className="w-full h-12 mb-3">
-              <polyline
-                fill="none"
-                stroke="#16a34a"
-                strokeWidth="3"
-                points="0,30 30,18 60,22 90,10 120,14 150,6 180,12 200,8"
-              />
-            </svg>
+            <h3 className="text-xl font-semibold mb-4">Top Courses</h3>
 
             <div className="space-y-3 text-sm">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span>Web Dev</span>
-                  <span>500</span>
+              {courseAnalytics.map((course, idx) => (
+                <div key={idx}>
+                  <div className="flex justify-between mb-1">
+                    <span className="truncate">{course.name}</span>
+                    <span className="font-semibold">{course.count}</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded-full">
+                    <div className="h-2 bg-green-500 rounded-full" style={{ width: `${(course.count / maxEnrollments) * 100}%` }}></div>
+                  </div>
                 </div>
-                <div className="w-full h-2 bg-gray-200 rounded-full">
-                  <div className="h-2 bg-green-500 rounded-full" style={{ width: '70%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span>Machine Learning</span>
-                  <span>350</span>
-                </div>
-                <div className="w-full h-2 bg-gray-200 rounded-full">
-                  <div className="h-2 bg-green-500 rounded-full" style={{ width: '50%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span>Data Science</span>
-                  <span>300</span>
-                </div>
-                <div className="w-full h-2 bg-gray-200 rounded-full">
-                  <div className="h-2 bg-green-500 rounded-full" style={{ width: '45%' }}></div>
-                </div>
-              </div>
+              ))}
+              {courseAnalytics.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No course data available</p>
+              )}
             </div>
           </div>
         </aside>

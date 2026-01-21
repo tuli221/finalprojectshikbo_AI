@@ -101,7 +101,6 @@ function App() {
         <Route path="students" element={<InstructorDashboard />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="payments" element={<InstructorDashboard />} />
-        <Route path="messages" element={<InstructorDashboard />} />
         <Route path="profile" element={<InstructorDashboard />} />
       </Route>
 

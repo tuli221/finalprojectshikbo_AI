@@ -21,13 +21,11 @@ const InstructorLayout = () => {
   }
 
   const navLinks = [
-    { path: '/instructor/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/instructor/my-courses', label: 'My Courses', icon: '📚' },
-    { path: '/instructor/students', label: 'Students', icon: '👨‍🎓' },
-    { path: '/instructor/request', label: 'Request', icon: '✉️' },
-    
-    { path: '/instructor/messages', label: 'Messages', icon: '💬' },
-    { path: '/instructor/profile', label: 'Profile', icon: '👤' }
+    { path: '/instructor/dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie' },
+    { path: '/instructor/my-courses', label: 'My Courses', icon: 'fa-solid fa-book' },
+    { path: '/instructor/students', label: 'Students', icon: 'fa-solid fa-user-graduate' },
+    { path: '/instructor/request', label: 'Request', icon: 'fa-solid fa-paper-plane' },
+    { path: '/instructor/profile', label: 'Profile', icon: 'fa-solid fa-user' }
   ]
 
   return (
@@ -62,7 +60,7 @@ const InstructorLayout = () => {
                   : 'hover:bg-green-100 hover:text-green-600'
               }`}
             >
-              <span>{link.icon}</span>
+              <i className={link.icon}></i>
               {link.label}
             </Link>
           ))}

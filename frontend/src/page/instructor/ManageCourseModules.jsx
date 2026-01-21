@@ -502,10 +502,7 @@ const ManageCourseModules = () => {
                                     >
                                       <option value="text">Text/Article</option>
                                       {course?.type === 'Online' && (
-                                        <>
-                                          <option value="video">Video</option>
-                                          <option value="file">File/Document</option>
-                                        </>
+                                        <option value="file">File/Document</option>
                                       )}
                                     </select>
                                   </div>
@@ -539,14 +536,13 @@ const ManageCourseModules = () => {
                                   </div>
                                 )}
 
-                                {course?.type === 'Online' && (lesson.lesson_type === 'video' || lesson.lesson_type === 'file') && (
+                                {course?.type === 'Online' && lesson.lesson_type === 'file' && (
                                   <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                                      Upload {lesson.lesson_type === 'video' ? 'Video' : 'File'}
+                                      Upload File
                                     </label>
                                     <input
                                       type="file"
-                                      accept={lesson.lesson_type === 'video' ? 'video/*' : '*'}
                                       onChange={(e) => handleLessonFileChange(moduleIndex, lessonIndex, e.target.files[0])}
                                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />

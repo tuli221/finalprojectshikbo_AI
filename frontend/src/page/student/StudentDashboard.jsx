@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../config/api'
 import getCourseImage from '../../utils/getCourseImage'
@@ -13,6 +13,7 @@ const defaultStats = {
 export default function StudentDashboard() {
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const { searchQuery = '' } = useOutletContext() || {}
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const [stats, setStats] = useState(defaultStats)
   const [courses, setCourses] = useState([])
@@ -83,7 +84,14 @@ export default function StudentDashboard() {
           {loading ? (
             <div>Loading courses...</div>
           ) : (
-            courses.map((c) => (
+            courses.filter(c => {
+              if (!searchQuery) return true
+              const title = (c.title || '').toLowerCase()
+              const category = (c.category || '').toLowerCase()
+              const description = (c.description || '').toLowerCase()
+              const query = searchQuery.toLowerCase()
+              return title.includes(query) || category.includes(query) || description.includes(query)
+            }).map((c) => (
               <div key={c.id} className="bg-white rounded-lg shadow border p-6">
                 <div className="h-36 bg-gray-50 rounded-md mb-4 flex items-start">
                   <img

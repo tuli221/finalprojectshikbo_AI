@@ -5,7 +5,7 @@ const ChatButton = ({ isOpen, setIsOpen }) => {
   const [chatHistory, setChatHistory] = useState([])
   const [isTyping, setIsTyping] = useState(false)
 
-  // Sample AI responses
+  // Sample  responses
   const aiResponses = [
     "Hello! I'm your AI learning assistant. How can I help you today?",
     "That's a great question! Let me find the best learning path for you.",
@@ -87,7 +87,7 @@ const ChatButton = ({ isOpen, setIsOpen }) => {
               <i className="fa-solid fa-robot"></i>
             </div>
             <div>
-              <h3 className="font-semibold">AI Learning Assistant</h3>
+              <h3 className="font-semibold"> Learning Assistant</h3>
               <p className="text-xs opacity-80">Online • Ready to help</p>
             </div>
           </div>

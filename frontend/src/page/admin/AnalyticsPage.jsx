@@ -1,29 +1,36 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../../config/api'
 
 const AnalyticsPage = () => {
-  const analyticsData = {
-    overview: [
-      { label: 'Total Users', value: 5432, change: '+12%', trend: 'up' },
-      { label: 'Active Courses', value: 12, change: '+3', trend: 'up' },
-      { label: 'Total Revenue', value: '৳2.34M', change: '+18%', trend: 'up' },
-      { label: 'Completion Rate', value: '78%', change: '-2%', trend: 'down' }
-    ],
-    coursePerformance: [
-      { course: 'AI Fundamentals', enrollments: 432, revenue: 2160000, completion: 85 },
-      { course: 'Web Development', enrollments: 856, revenue: 3852000, completion: 78 },
-      { course: 'Data Science', enrollments: 623, revenue: 3738000, completion: 92 },
-      { course: 'MERN Stack', enrollments: 512, revenue: 2816000, completion: 71 },
-      { course: 'Mobile Development', enrollments: 289, revenue: 1387200, completion: 68 }
-    ],
-    monthlyData: [
-      { month: 'Jan', users: 423, revenue: 185000 },
-      { month: 'Feb', users: 512, revenue: 234000 },
-      { month: 'Mar', users: 689, revenue: 312000 },
-      { month: 'Apr', users: 834, revenue: 398000 },
-      { month: 'May', users: 956, revenue: 445000 },
-      { month: 'Jun', users: 1123, revenue: 512000 }
-    ]
+  const [analyticsData, setAnalyticsData] = useState({
+    overview: {},
+    coursePerformance: []
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await api.get('/admin/analytics')
+        setAnalyticsData(response.data)
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAnalytics()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-gray-600">Loading analytics...</div>
+      </div>
+    )
   }
+
+  const { overview, coursePerformance } = analyticsData
 
   return (
     <div className="space-y-6">
@@ -32,7 +39,7 @@ const AnalyticsPage = () => {
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
             <p className="text-bold opacity-80">Total Users</p>
-            <h3 className="text-3xl font-bold">5,432</h3>
+            <h3 className="text-3xl font-bold">{overview.totalUsers || 0}</h3>
           </div>
           <div className="text-4xl opacity-80">👥</div>
         </div>
@@ -40,7 +47,7 @@ const AnalyticsPage = () => {
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
             <p className="text-bold opacity-80">Active Courses</p>
-            <h3 className="text-3xl font-bold">12</h3>
+            <h3 className="text-3xl font-bold">{overview.activeCourses || 0}</h3>
           </div>
           <div className="text-4xl opacity-80">📚</div>
         </div>
@@ -48,17 +55,17 @@ const AnalyticsPage = () => {
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
             <p className="text-bold opacity-80">Total Revenue</p>
-            <h3 className="text-3xl font-bold">৳2.34M</h3>
+            <h3 className="text-3xl font-bold">৳{Number(overview.totalRevenue || 0).toLocaleString()}</h3>
           </div>
           <div className="text-4xl opacity-80">💰</div>
         </div>
 
         <div className="bg-gradient-to-r from-green-700 to-green-300 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center">
           <div>
-            <p className="text-bold opacity-80">Completion Rate</p>
-            <h3 className="text-3xl font-bold">78%</h3>
+            <p className="text-bold opacity-80">Pending Revenue</p>
+            <h3 className="text-3xl font-bold">৳{Number(overview.pendingRevenue || 0).toLocaleString()}</h3>
           </div>
-          <div className="text-4xl opacity-80">✅</div>
+          <div className="text-4xl opacity-80">⏳</div>
         </div>
       </section>
 
@@ -77,7 +84,7 @@ const AnalyticsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {analyticsData.coursePerformance.map((course, index) => (
+              {coursePerformance && coursePerformance.length > 0 ? coursePerformance.map((course, index) => (
                 <tr key={index} className="hover:bg-gray-50">
                   <td className="p-3 font-medium">{course.course}</td>
                   <td className="p-3">{course.enrollments}</td>
@@ -111,97 +118,36 @@ const AnalyticsPage = () => {
                     </span>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="5" className="p-3 text-center text-gray-500">No course data available</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* User Growth Chart */}
-        <div className="bg-white p-8 rounded-2xl shadow">
-          <h3 className="text-xl font-semibold mb-6">User Growth (6 Months)</h3>
-          <div className="space-y-4">
-            {analyticsData.monthlyData.map((data, index) => (
-              <div key={index}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium">{data.month}</span>
-                  <span className="text-sm font-bold text-green-600">{data.users} users</span>
-                </div>
-                <div className="bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-green-700 to-green-400 h-3 rounded-full"
-                    style={{
-                      width: `${
-                        (data.users / Math.max(...analyticsData.monthlyData.map((d) => d.users))) *
-                        100
-                      }%`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Revenue Growth Chart */}
-        <div className="bg-white p-8 rounded-2xl shadow">
-          <h3 className="text-xl font-semibold mb-6">Revenue Growth (6 Months)</h3>
-          <div className="space-y-4">
-            {analyticsData.monthlyData.map((data, index) => (
-              <div key={index}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium">{data.month}</span>
-                  <span className="text-sm font-bold text-green-600">
-                    ৳{(data.revenue / 1000).toFixed(0)}k
-                  </span>
-                </div>
-                <div className="bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-gradient-to-r from-blue-700 to-blue-400 h-3 rounded-full"
-                    style={{
-                      width: `${
-                        (data.revenue /
-                          Math.max(...analyticsData.monthlyData.map((d) => d.revenue))) *
-                        100
-                      }%`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Metrics */}
+      {/* Charts Section - Removed static monthly data (can be added later with proper backend) */}
+      
+      {/* Additional Metrics - Using dynamic data */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow">
-          <h4 className="text-lg font-semibold mb-4">Top Performing Instructor</h4>
-          <p className="text-2xl font-bold text-green-600">Dr. Jane Smith</p>
-          <p className="text-sm text-gray-600 mt-1">5 courses • 1,234 students</p>
-          <p className="text-sm text-gray-600">Rating: 4.8/5.0</p>
+          <h4 className="text-lg font-semibold mb-4">Students</h4>
+          <p className="text-2xl font-bold text-green-600">{overview.totalStudents || 0}</p>
+          <p className="text-sm text-gray-600 mt-1">Total enrolled students</p>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow">
-          <h4 className="text-lg font-semibold mb-4">Most Popular Course</h4>
-          <p className="text-2xl font-bold text-green-600">Web Development</p>
-          <p className="text-sm text-gray-600 mt-1">856 enrollments</p>
-          <p className="text-sm text-gray-600">Revenue: ৳3.85M</p>
+          <h4 className="text-lg font-semibold mb-4">Instructors</h4>
+          <p className="text-2xl font-bold text-green-600">{overview.totalInstructors || 0}</p>
+          <p className="text-sm text-gray-600 mt-1">Active instructors</p>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow">
-          <h4 className="text-lg font-semibold mb-4">Average Rating</h4>
-          <p className="text-2xl font-bold text-green-600">4.7/5.0</p>
-          <p className="text-sm text-gray-600 mt-1">Based on 2,341 reviews</p>
-          <div className="flex gap-1 mt-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <span key={star} className="text-yellow-500 text-lg">
-                ★
-              </span>
-            ))}
-          </div>
+          <h4 className="text-lg font-semibold mb-4">Total Revenue</h4>
+          <p className="text-2xl font-bold text-green-600">৳{Number(overview.totalRevenue || 0).toLocaleString()}</p>
+          <p className="text-sm text-gray-600 mt-1">From completed payments</p>
         </div>
       </div>
     </div>

@@ -1,10 +1,30 @@
 import React, { useState } from 'react'
 
-export default function TopBar({ title, showSidebarToggle = false, onToggleSidebar, profile = {}, showSearch = true }) {
+export default function TopBar({ 
+  title, 
+  showSidebarToggle = false, 
+  onToggleSidebar, 
+  profile = {}, 
+  showSearch = true,
+  searchValue = '',
+  onSearchChange = null
+}) {
   const [open, setOpen] = useState(false)
+  const [internalSearch, setInternalSearch] = useState('')
 
   const name = profile.name || 'Profile'
   const avatar = profile.avatar || `https://api.dicebear.com/6.x/initials/svg?seed=${name.replace(/\s+/g, '')}`
+
+  // Use parent's search state if provided, otherwise use internal state
+  const searchTerm = onSearchChange ? searchValue : internalSearch
+  const handleSearchChange = (e) => {
+    const value = e.target.value
+    if (onSearchChange) {
+      onSearchChange(value)
+    } else {
+      setInternalSearch(value)
+    }
+  }
 
   return (
     <header className="bg-white border-b">
@@ -24,7 +44,10 @@ export default function TopBar({ title, showSidebarToggle = false, onToggleSideb
         <div className="flex items-center gap-4">
           {showSearch && (
             <input
-              className="hidden md:block border rounded px-3 py-2 text-sm"
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="hidden md:block border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="Search courses..."
             />
           )}

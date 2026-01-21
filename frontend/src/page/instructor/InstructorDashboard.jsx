@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import MyCourses from './MyCourses'
 import Students from './Students'
-import Messages from './Messages'
 import Profile from './Profile'
 import InstructorRequest from './InstructorRequest'
 import RequestPending from './RequestPending'
@@ -19,7 +18,6 @@ const InstructorDashboard = () => {
   const [myCoursesCount, setMyCoursesCount] = useState(0)
   const [myStudentsCount, setMyStudentsCount] = useState(0)
   const [myCourses, setMyCourses] = useState([])
-  const [totalViews, setTotalViews] = useState(0)
   const [completionRate, setCompletionRate] = useState(0)
   const [instructorStatus, setInstructorStatus] = useState('loading') // loading, no-profile, pending, approved, declined
 
@@ -91,7 +89,6 @@ const InstructorDashboard = () => {
     
     if (path === '/instructor/my-courses') return <MyCourses />
     if (path === '/instructor/students') return <Students />
-    if (path === '/instructor/messages') return <Messages />
     if (path === '/instructor/profile') return <Profile />
     
     // Default dashboard content
@@ -148,7 +145,10 @@ const InstructorDashboard = () => {
                         </span>
                       </td>
                       <td className="py-3 px-2 md:px-4">
-                        <button className="px-3 md:px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm">
+                        <button 
+                          onClick={() => navigate(`/instructor/courses/${course.id}/modules`)}
+                          className="px-3 md:px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm"
+                        >
                           Edit
                         </button>
                       </td>
@@ -165,18 +165,13 @@ const InstructorDashboard = () => {
           <h3 className="text-lg md:text-xl font-bold mb-3">Student Engagement</h3>
           <p className="text-gray-600 mb-4 text-sm md:text-base">Last 7 days activity</p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
             <div className="bg-green-50 p-4 md:p-5 rounded-xl shadow-sm text-center">
               <h4 className="text-xl md:text-2xl font-bold text-green-600">{myStudentsCount}</h4>
               <p className="text-gray-600 text-sm md:text-base">Total Enrollments</p>
             </div>
 
             <div className="bg-green-50 p-4 md:p-5 rounded-xl shadow-sm text-center">
-              <h4 className="text-xl md:text-2xl font-bold text-green-600">{totalViews}</h4>
-              <p className="text-gray-600 text-sm md:text-base">Video Views</p>
-            </div>
-
-            <div className="bg-green-50 p-4 md:p-5 rounded-xl shadow-sm text-center sm:col-span-2 lg:col-span-1">
               <h4 className="text-xl md:text-2xl font-bold text-green-600">{completionRate}%</h4>
               <p className="text-gray-600 text-sm md:text-base">Avg Completion Rate</p>
             </div>
@@ -217,10 +212,6 @@ const InstructorDashboard = () => {
         // Sum students across instructor's courses
         const studentsSum = myList.reduce((sum, c) => sum + getCountFromCourse(c), 0)
         if (mounted) setMyStudentsCount(studentsSum)
-
-        // Sum views across courses (common field names)
-        const viewsSum = myList.reduce((s, c) => s + (c.views_count || c.views || 0), 0)
-        if (mounted) setTotalViews(viewsSum)
 
         // Average completion rate if present (assumes 0-100 or 0-1)
         const completionValues = myList
